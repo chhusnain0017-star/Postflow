@@ -1,0 +1,20 @@
+{
+  "users": [
+    {
+      "id": "admin-1",
+      "name": "System Admin",
+      "email": "admin@postflow.local",
+      "passwordHash": "admin123",
+      "role": "SYSTEM_ADMIN",
+      "status": "APPROVED",
+      "workspaceId": "workspace-admin",
+      "accessStartDate": "2026-10-01T22:48:23.964Z",
+      "accessExpiryDate": "2036-09-28T22:48:23.980Z",
+      "createdAt": "2026-10-01T22:48:23.964Z"
+    }
+  ],
+  "accessRequests": [],
+  "posts": [],
+  "socialAccounts": [],
+  "logs": []
+}
