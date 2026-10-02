@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { addAuditLog, createAccessRequest, createPost, getUserByEmail, readStore, seedDemoData, upsertUser } from "@/lib/store";
+import { addAuditLog, createAccessRequest, createPost, getUserByEmail, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
 import { createSessionToken, hashPassword, verifyPassword } from "@/lib/auth";
 import { cookies } from "next/headers";
 
@@ -87,6 +87,66 @@ export async function requestAccessAction(formData: FormData) {
   });
 
   redirect("/waiting");
+}
+
+export async function approveAccessRequestAction(formData: FormData) {
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const store = readStore();
+  const request = store.accessRequests.find((entry) => entry.id === requestId);
+
+  if (!request) {
+    throw new Error("Access request not found.");
+  }
+
+  const existing = store.users.find((entry) => entry.email.toLowerCase() === request.email.toLowerCase());
+  if (existing) {
+    throw new Error("A customer with that email already exists.");
+  }
+
+  const user = {
+    id: `user-${Date.now()}`,
+    name: request.name,
+    email: request.email,
+    passwordHash: request.passwordHash,
+    role: "OWNER" as const,
+    status: "APPROVED" as const,
+    workspaceId: `workspace-${Date.now()}`,
+    accessStartDate: new Date().toISOString(),
+    accessExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date().toISOString(),
+  };
+
+  store.users.push(user);
+  store.accessRequests = store.accessRequests.filter((entry) => entry.id !== requestId);
+  writeStore(store);
+  addAuditLog({
+    workspaceId: user.workspaceId,
+    userId: user.id,
+    event: "Access Approved",
+    details: `${user.name} access was approved by admin`,
+  });
+
+  redirect("/admin/requests");
+}
+
+export async function rejectAccessRequestAction(formData: FormData) {
+  const requestId = String(formData.get("requestId") ?? "").trim();
+  const store = readStore();
+  const request = store.accessRequests.find((entry) => entry.id === requestId);
+
+  if (!request) {
+    throw new Error("Access request not found.");
+  }
+
+  store.accessRequests = store.accessRequests.filter((entry) => entry.id !== requestId);
+  writeStore(store);
+  addAuditLog({
+    userId: request.id,
+    event: "Access Rejected",
+    details: `${request.name} request was rejected by admin`,
+  });
+
+  redirect("/admin/requests");
 }
 
 export async function createCustomerPost(formData: FormData) {

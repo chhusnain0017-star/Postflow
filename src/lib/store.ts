@@ -70,8 +70,8 @@ export type AppData = {
 
 const DATA_DIR = process.env.DATA_DIR || "/app/data";
 const STORE_PATH = join(DATA_DIR, "app-data.json");
-const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "admin@postflow.local";
-const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD ?? "admin123";
+const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL ?? "admin@postflow.local").trim();
+const SUPER_ADMIN_PASSWORD = (process.env.SUPER_ADMIN_PASSWORD ?? "admin123").trim();
 
 function defaultData(): AppData {
   const now = new Date().toISOString();

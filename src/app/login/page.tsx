@@ -3,58 +3,40 @@
 import { useState } from "react";
 import { loginAction } from "@/app/actions";
 
-const DEFAULT_ADMIN_EMAIL = process.env.NEXT_PUBLIC_SUPER_ADMIN_EMAIL ?? "admin@postflow.local";
-const DEFAULT_ADMIN_PASSWORD = process.env.NEXT_PUBLIC_SUPER_ADMIN_PASSWORD ?? "admin123";
-
 export default function LoginPage() {
-  const [email, setEmail] = useState(DEFAULT_ADMIN_EMAIL);
-  const [password, setPassword] = useState(DEFAULT_ADMIN_PASSWORD);
-
-  const fillAdminCredentials = () => {
-    setEmail(DEFAULT_ADMIN_EMAIL);
-    setPassword(DEFAULT_ADMIN_PASSWORD);
-  };
+  const [isAdminMode, setIsAdminMode] = useState(false);
 
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <p className="eyebrow">Access portal</p>
-        <h1>Welcome back</h1>
+        <p className="eyebrow">{isAdminMode ? "Admin access" : "Access portal"}</p>
+        <h1>{isAdminMode ? "Admin login" : "Welcome back"}</h1>
+
+        <div className="auth-mode-switch" aria-label="Authentication mode selector">
+          <button type="button" className={!isAdminMode ? "mode-btn active" : "mode-btn"} onClick={() => setIsAdminMode(false)}>
+            Login
+          </button>
+          <button type="button" className={isAdminMode ? "mode-btn active" : "mode-btn"} onClick={() => setIsAdminMode(true)}>
+            Admin login
+          </button>
+        </div>
 
         <form action={loginAction} className="form-stack">
           <label>
             <span>Email</span>
-            <input
-              name="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-            />
+            <input name="email" type="email" placeholder={isAdminMode ? "admin@yourdomain.com" : "you@example.com"} required />
           </label>
 
           <label>
             <span>Password</span>
-            <input
-              name="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-            />
+            <input name="password" type="password" placeholder={isAdminMode ? "Enter admin password" : "Enter your password"} required />
           </label>
 
-          <button type="submit" className="primary-btn">Login</button>
+          <button type="submit" className="primary-btn">{isAdminMode ? "Admin login" : "Login"}</button>
         </form>
 
-        <div className="auth-actions">
-          <button type="button" className="secondary-btn" onClick={fillAdminCredentials}>
-            Admin
-          </button>
-          <a href="/request-access" className="text-link">Request access</a>
-        </div>
-
         <div className="auth-links">
+          <a href="/request-access">Request access</a>
           <a href="/">Return home</a>
         </div>
       </section>

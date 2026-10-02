@@ -47,40 +47,34 @@ textarea {
 
 .hero {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 32px;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 24px;
   align-items: center;
-  min-height: 540px;
+  min-height: 620px;
 }
 
 .hero-copy {
-  padding: 24px 8px;
+  padding: 10px 8px 0;
 }
 
 .hero-copy h1 {
-  font-size: clamp(4rem, 7vw, 9rem);
-  line-height: 0.95;
-  letter-spacing: -0.08em;
-  margin: 0 0 24px;
+  font-size: clamp(4.1rem, 7vw, 9rem);
+  line-height: 0.86;
+  letter-spacing: -0.085em;
+  margin: 0 0 28px;
   font-weight: 900;
-}
-
-.hero-copy p {
-  max-width: 540px;
-  font-size: 1.1rem;
-  color: var(--muted);
-  margin-bottom: 28px;
 }
 
 .hero-actions {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 32px;
+  margin-top: 12px;
 }
 
 .primary-btn,
-.secondary-btn {
+.secondary-btn,
+.mode-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -108,27 +102,21 @@ textarea {
   border: 1px solid var(--border);
 }
 
-.inline-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 14px;
-}
-
 .hero-visual {
   position: relative;
-  min-height: 430px;
+  height: 610px;
+  min-width: 0;
 }
 
 .video-card {
   position: absolute;
-  left: 0;
-  top: 150px;
-  width: 300px;
-  height: 200px;
-  background: #f7f7f7;
-  border-radius: 28px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08);
+  left: 60px;
+  top: 210px;
+  width: 250px;
+  height: 190px;
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 22px;
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,19 +124,19 @@ textarea {
 }
 
 .video-icon {
-  width: 120px;
-  height: 120px;
+  width: 115px;
+  height: 115px;
   border-radius: 18px;
-  background: linear-gradient(135deg, var(--primary), #f58b62);
+  background: linear-gradient(135deg, #f1592a, #f58b62);
   position: relative;
 }
 
 .video-icon::before {
   content: "";
   position: absolute;
-  left: 46px;
-  top: 26px;
-  border-left: 40px solid white;
+  left: 43px;
+  top: 24px;
+  border-left: 38px solid white;
   border-top: 28px solid transparent;
   border-bottom: 28px solid transparent;
 }
@@ -157,7 +145,8 @@ textarea {
   position: absolute;
   bottom: 18px;
   font-weight: 700;
-  font-size: 1.5rem;
+  font-size: 1.2rem;
+  letter-spacing: -0.04em;
 }
 
 .network-arrows {
@@ -165,27 +154,141 @@ textarea {
   inset: 0;
 }
 
-.network-arrows svg {
-  width: 100%;
-  height: 100%;
+.arrow {
+  position: absolute;
+  right: 80px;
+  border-top: 22px solid transparent;
+  border-bottom: 22px solid transparent;
+  border-left: 110px solid var(--primary);
+  transform-origin: left center;
+  filter: drop-shadow(0 10px 14px rgba(241, 89, 42, 0.18));
 }
 
-.platform-tags {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+.arrow::before {
+  content: "";
+  position: absolute;
+  left: -120px;
+  top: -18px;
+  width: 120px;
+  height: 36px;
+  background: var(--primary);
+  border-radius: 18px;
+}
+
+.arrow-1 { top: 154px; width: 150px; transform: rotate(30deg); }
+.arrow-2 { top: 192px; width: 180px; transform: rotate(16deg); }
+.arrow-3 { top: 235px; width: 200px; transform: rotate(5deg); }
+.arrow-4 { top: 286px; width: 220px; transform: rotate(-12deg); }
+.arrow-5 { top: 332px; width: 200px; transform: rotate(-25deg); }
+.arrow-6 { top: 388px; width: 170px; transform: rotate(-42deg); }
+
+.platform-stack {
+  position: absolute;
+  right: 30px;
+  top: 130px;
+  width: 380px;
+  height: 360px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px 20px;
+  align-items: center;
+  justify-items: center;
 }
 
 .platform-pill {
-  width: 62px;
-  height: 62px;
+  width: 76px;
+  height: 76px;
   border-radius: 50%;
   display: grid;
   place-items: center;
   color: #111;
-  background: white;
+  background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
   font-weight: 800;
+  font-size: 2rem;
+}
+
+.facebook { color: #1877f2; }
+.instagram { color: #e8446c; }
+.tiktok { color: #111; }
+.x { color: #111; }
+.pinterest { color: #d70010; }
+.youtube { color: #ff0033; }
+
+.auth-mode-switch {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.mode-btn {
+  background: rgba(17, 17, 17, 0.04);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.mode-btn.active {
+  background: var(--text);
+  color: white;
+}
+
+.auth-card h1 {
+  margin: 0 0 18px;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.form-stack label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.form-stack input,
+.form-stack textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.auth-links {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+  color: var(--muted);
+}
+
+.request-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+}
+
+.request-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.request-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.empty-state {
+  color: var(--muted);
+  font-style: italic;
 }
 
 .auth-shell {
