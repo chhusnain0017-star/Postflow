@@ -86,7 +86,7 @@ export async function requestAccessAction(formData: FormData) {
     details: `${name} submitted an access request`,
   });
 
-  return { message: "Your request has been submitted. Please wait for administrator approval." };
+  redirect("/waiting");
 }
 
 export async function createCustomerPost(formData: FormData) {
@@ -117,7 +117,7 @@ export async function createCustomerPost(formData: FormData) {
     details: `Post ${post.id} created for ${payload.workspaceId}`,
   });
 
-  return { message: `Post prepared and queued for ${platforms.join(", ") || "selected platforms"}.` };
+  redirect("/history");
 }
 
 export async function getCurrentUser() {
