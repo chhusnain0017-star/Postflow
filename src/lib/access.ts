@@ -32,3 +32,15 @@ export async function requireAdmin(): Promise<UserRecord> {
   if (!isConfiguredSuperAdminIdentity(user.email, user.role)) redirect("/dashboard");
   return user;
 }
+
+export async function requireTeamManager(): Promise<UserRecord> {
+  const user = await requireCustomer();
+  if (user.role !== "OWNER" && user.role !== "ADMIN") redirect("/dashboard");
+  return user;
+}
+
+export async function requirePostApprover(): Promise<UserRecord> {
+  const user = await requireCustomer();
+  if (!["OWNER", "ADMIN", "APPROVER"].includes(user.role)) redirect("/calendar");
+  return user;
+}

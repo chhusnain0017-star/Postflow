@@ -45,6 +45,7 @@ export default function Home() {
           </div>
         </div>
       </section>
+      <p className="powered-by">Powered by <a href="https://taskflow.monster" target="_blank" rel="noreferrer">taskflow.monster</a></p>
     </main>
   );
 }

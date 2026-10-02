@@ -1,5 +1,6 @@
 import { requireCustomer } from "@/lib/access";
 import { readStore } from "@/lib/store";
+import CustomerNav from "@/app/components/CustomerNav";
 
 export default async function DashboardPage() {
   const user = await requireCustomer();
@@ -9,19 +10,7 @@ export default async function DashboardPage() {
 
   return (
     <main className="app-shell">
-      <aside className="side-nav">
-        <div className="brand">PostFlow</div>
-        <nav>
-          <a href="/dashboard" className="active">Overview</a>
-          <a href="/create-post">Create Post</a>
-          <a href="/integrations">Integrations</a>
-          <a href="/history">History</a>
-          <a href="/settings">Settings</a>
-        </nav>
-        <form action="/api/auth/logout" method="POST" className="logout-form">
-          <button type="submit">Logout</button>
-        </form>
-      </aside>
+      <CustomerNav active="dashboard" role={user.role} />
 
       <section className="content-panel">
         <h1>Customer dashboard</h1>

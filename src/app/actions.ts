@@ -1,12 +1,15 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { addAuditLog, createAccessRequest, createPost, ensureConfiguredAdmin, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
 import { createSessionToken, encryptProviderCredentials, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { requireAdmin, requireCustomer, requireSignedInUser } from "@/lib/access";
+import { requireAdmin, requireCustomer, requirePostApprover, requireSignedInUser, requireTeamManager } from "@/lib/access";
 import { isSocialPlatform } from "@/lib/platforms";
+import { localDateTimeToUtc } from "@/lib/time-zone";
 
 export async function loginAction(formData: FormData) {
   const identifier = String(formData.get("identifier") ?? formData.get("email") ?? formData.get("superAdminEmail") ?? "").trim();
@@ -220,27 +223,267 @@ export async function createCustomerPost(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const hashtags = String(formData.get("hashtags") ?? "").trim();
-  const platforms = formData.getAll("platforms") as string[];
+  const campaignName = String(formData.get("campaignName") ?? "").trim().slice(0, 120);
+  const selectedValues = formData.getAll("platforms").map(String);
+  const platforms = [...new Set(selectedValues)].filter(isSocialPlatform);
   const user = await requireCustomer();
-  if (!title || !description) throw new Error("A title and description are required.");
+  if (!title || title.length > 250 || !description || description.length > 10000) {
+    throw new Error("Enter a title (up to 250 characters) and description (up to 10,000 characters).");
+  }
+  if (platforms.length === 0) throw new Error("Select at least one supported platform.");
+
+  const assetIds = [...new Set(formData.getAll("assetIds").map(String))];
+  const currentStore = readStore();
+  const ownedAssetIds = new Set(currentStore.assets.filter((asset) => asset.workspaceId === user.workspaceId && !asset.archivedAt).map((asset) => asset.id));
+  if (assetIds.some((assetId) => !ownedAssetIds.has(assetId))) throw new Error("A selected asset is missing or does not belong to this workspace.");
+
+  const scheduleValue = String(formData.get("scheduledAt") ?? "");
+  const timeZone = String(formData.get("timeZone") ?? "UTC");
+  const parsedScheduledAt = scheduleValue ? localDateTimeToUtc(scheduleValue, timeZone) : null;
+  if (scheduleValue && (!parsedScheduledAt || Date.parse(parsedScheduledAt) <= Date.now())) {
+    throw new Error("Choose a valid future schedule time.");
+  }
+  const scheduledAt = parsedScheduledAt ?? undefined;
+
+  const needsApproval = user.role === "EDITOR" || user.role === "MEMBER";
 
   const post = createPost({
     workspaceId: user.workspaceId,
+    createdById: user.id,
     title,
     description,
     hashtags,
     selectedPlatforms: platforms,
-    status: "DRAFT",
+    assetIds,
+    status: needsApproval ? "PENDING_APPROVAL" : scheduledAt ? "SCHEDULED" : "DRAFT",
+    campaignName: campaignName || undefined,
+    scheduledAt,
+    scheduleTimeZone: scheduledAt ? timeZone : undefined,
+    approvalStatus: needsApproval ? "PENDING" : "NOT_REQUIRED",
   });
 
   addAuditLog({
     workspaceId: user.workspaceId,
     userId: user.id,
-    event: "Post Draft Created",
-    details: `Post ${post.id} saved as a draft for ${user.workspaceId}`,
+    event: needsApproval ? "Post Submitted for Approval" : scheduledAt ? "Post Scheduled" : "Post Draft Created",
+    details: `Post ${post.id} entered ${post.status} state for ${platforms.join(", ")}`,
   });
 
-  redirect("/history");
+  redirect(needsApproval ? "/approvals" : scheduledAt ? "/calendar" : "/library");
+}
+
+export async function archiveAssetAction(formData: FormData) {
+  const user = await requireCustomer();
+  const assetId = String(formData.get("assetId") ?? "");
+  const store = readStore();
+  const asset = store.assets.find((entry) => entry.id === assetId && entry.workspaceId === user.workspaceId && !entry.archivedAt);
+  if (!asset) throw new Error("Asset not found in this workspace.");
+  asset.archivedAt = new Date().toISOString();
+  writeStore(store);
+  addAuditLog({ workspaceId: user.workspaceId, userId: user.id, event: "Asset Archived", details: `${asset.originalName} was archived` });
+  revalidatePath("/library");
+  revalidatePath("/create-post");
+  redirect("/library");
+}
+
+export async function approvePostAction(formData: FormData) {
+  const user = await requirePostApprover();
+  const postId = String(formData.get("postId") ?? "");
+  const store = readStore();
+  const post = store.posts.find((entry) => entry.id === postId && entry.workspaceId === user.workspaceId);
+  if (!post || post.approvalStatus !== "PENDING") throw new Error("Pending post approval not found.");
+  if (post.createdById === user.id) throw new Error("You cannot approve your own post.");
+
+  post.approvalStatus = "APPROVED";
+  post.approvedBy = user.id;
+  post.status = post.scheduledAt ? "SCHEDULED" : "DRAFT";
+  writeStore(store);
+  addAuditLog({ workspaceId: user.workspaceId, userId: user.id, event: "Post Approved", details: `${post.id} was approved` });
+  revalidatePath("/approvals");
+  revalidatePath("/calendar");
+  redirect("/approvals");
+}
+
+export async function rejectPostAction(formData: FormData) {
+  const user = await requirePostApprover();
+  const postId = String(formData.get("postId") ?? "");
+  const store = readStore();
+  const post = store.posts.find((entry) => entry.id === postId && entry.workspaceId === user.workspaceId);
+  if (!post || post.approvalStatus !== "PENDING") throw new Error("Pending post approval not found.");
+  if (post.createdById === user.id) throw new Error("You cannot reject your own post.");
+
+  post.approvalStatus = "REJECTED";
+  post.status = "DRAFT";
+  post.scheduledAt = undefined;
+  writeStore(store);
+  addAuditLog({ workspaceId: user.workspaceId, userId: user.id, event: "Post Rejected", details: `${post.id} was returned to drafts` });
+  revalidatePath("/approvals");
+  redirect("/approvals");
+}
+
+export async function reschedulePostAction(formData: FormData) {
+  const user = await requireCustomer();
+  const postId = String(formData.get("postId") ?? "");
+  const scheduleValue = String(formData.get("scheduledAt") ?? "");
+  const timeZone = String(formData.get("timeZone") ?? "UTC");
+  const scheduledAt = localDateTimeToUtc(scheduleValue, timeZone);
+  if (!scheduledAt || Date.parse(scheduledAt) <= Date.now()) throw new Error("Choose a valid future schedule time.");
+
+  const store = readStore();
+  const post = store.posts.find((entry) => entry.id === postId && entry.workspaceId === user.workspaceId);
+  if (!post || !["SCHEDULED", "DRAFT"].includes(post.status)) throw new Error("This post cannot be scheduled.");
+  if (post.createdById !== user.id && !["OWNER", "ADMIN"].includes(user.role)) throw new Error("You can only schedule your own posts.");
+
+  const needsApproval = user.role === "EDITOR" || user.role === "MEMBER";
+  post.scheduledAt = scheduledAt;
+  post.scheduleTimeZone = timeZone;
+  post.status = needsApproval ? "PENDING_APPROVAL" : "SCHEDULED";
+  post.approvalStatus = needsApproval ? "PENDING" : post.approvalStatus === "APPROVED" ? "APPROVED" : "NOT_REQUIRED";
+  writeStore(store);
+  addAuditLog({ workspaceId: user.workspaceId, userId: user.id, event: "Post Rescheduled", details: `${post.id} scheduled for ${scheduledAt}` });
+  revalidatePath("/calendar");
+  revalidatePath("/approvals");
+  redirect("/calendar");
+}
+
+export async function cancelScheduledPostAction(formData: FormData) {
+  const user = await requireCustomer();
+  const postId = String(formData.get("postId") ?? "");
+  const store = readStore();
+  const post = store.posts.find((entry) => entry.id === postId && entry.workspaceId === user.workspaceId);
+  if (!post || post.status !== "SCHEDULED") throw new Error("Scheduled post not found.");
+  if (post.createdById !== user.id && !["OWNER", "ADMIN"].includes(user.role)) throw new Error("You can only cancel your own scheduled posts.");
+
+  post.status = "CANCELLED";
+  writeStore(store);
+  addAuditLog({ workspaceId: user.workspaceId, userId: user.id, event: "Scheduled Post Cancelled", details: `${post.id} was removed from the queue` });
+  revalidatePath("/calendar");
+  redirect("/calendar");
+}
+
+const teamRoles = ["ADMIN", "EDITOR", "APPROVER", "MEMBER"] as const;
+
+export async function createTeamInviteAction(
+  _previousState: { error?: string; inviteUrl?: string } | null,
+  formData: FormData,
+): Promise<{ error?: string; inviteUrl?: string }> {
+  const manager = await requireTeamManager();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const role = String(formData.get("role") ?? "MEMBER");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !teamRoles.includes(role as (typeof teamRoles)[number])) {
+    return { error: "Enter a valid email and team role." };
+  }
+  if (manager.role === "ADMIN" && role === "ADMIN") return { error: "Only the workspace owner can invite another admin." };
+
+  const requestHeaders = await headers();
+  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
+  const protocol = requestHeaders.get("x-forwarded-proto")?.split(",")[0] ?? "https";
+  const requestOrigin = host ? `${protocol}://${host}` : "";
+  let origin = requestOrigin;
+  const configuredUrl = process.env.APP_URL?.trim();
+  if (configuredUrl) {
+    try {
+      const configured = new URL(configuredUrl);
+      const isLocalhost = ["localhost", "127.0.0.1", "::1"].includes(configured.hostname);
+      if (!(process.env.NODE_ENV === "production" && isLocalhost)) origin = configured.origin;
+    } catch {
+      if (!origin) return { error: "APP_URL is invalid; correct it before creating team invites." };
+    }
+  }
+  if (!origin) return { error: "Set APP_URL before creating team invites." };
+
+  const store = readStore();
+  if (store.users.some((user) => user.email.toLowerCase() === email)
+    || store.teamInvites.some((invite) => invite.email === email && !invite.acceptedAt && Date.parse(invite.expiresAt) > Date.now())) {
+    return { error: "That email already belongs to a user or has a pending invite." };
+  }
+
+  const token = randomBytes(32).toString("base64url");
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const createdAt = new Date();
+  store.teamInvites.push({
+    id: `invite-${randomUUID()}`,
+    workspaceId: manager.workspaceId,
+    email,
+    role: role as (typeof teamRoles)[number],
+    tokenHash,
+    createdById: manager.id,
+    createdAt: createdAt.toISOString(),
+    expiresAt: new Date(createdAt.getTime() + 72 * 60 * 60 * 1000).toISOString(),
+  });
+  writeStore(store);
+
+  addAuditLog({ workspaceId: manager.workspaceId, userId: manager.id, event: "Team Invite Created", details: `Invited ${email} as ${role}` });
+  revalidatePath("/team");
+  return { inviteUrl: `${origin}/team/accept?token=${encodeURIComponent(token)}` };
+}
+
+export async function acceptTeamInviteAction(formData: FormData) {
+  const token = String(formData.get("token") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(username) || name.length < 2 || name.length > 100 || password.length < 12 || password.length > 128) {
+    throw new Error("Enter your name, a 3-30 character username, and a password of at least 12 characters.");
+  }
+
+  const tokenHash = createHash("sha256").update(token).digest("hex");
+  const store = readStore();
+  const invite = store.teamInvites.find((entry) => entry.tokenHash === tokenHash);
+  if (!invite || invite.acceptedAt || Date.parse(invite.expiresAt) <= Date.now()) throw new Error("This team invite is invalid or expired.");
+  if (store.users.some((user) => user.email.toLowerCase() === invite.email || user.username?.toLowerCase() === username.toLowerCase())) {
+    throw new Error("That email or username is already in use.");
+  }
+
+  const now = new Date().toISOString();
+  store.users.push({
+    id: `user-${randomUUID()}`,
+    name,
+    username,
+    email: invite.email,
+    passwordHash: hashPassword(password),
+    role: invite.role,
+    status: "APPROVED",
+    workspaceId: invite.workspaceId,
+    accessStartDate: now,
+    accessExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: now,
+  });
+  invite.acceptedAt = now;
+  writeStore(store);
+  addAuditLog({ workspaceId: invite.workspaceId, event: "Team Invite Accepted", details: `${name} joined as ${invite.role}` });
+  redirect("/login");
+}
+
+export async function updateTeamMemberAction(formData: FormData) {
+  const manager = await requireTeamManager();
+  const memberId = String(formData.get("memberId") ?? "");
+  const requestedRole = String(formData.get("role") ?? "");
+  const store = readStore();
+  const member = store.users.find((user) => user.id === memberId && user.workspaceId === manager.workspaceId);
+  if (!member || member.id === manager.id || member.role === "OWNER" || member.role === "SYSTEM_ADMIN") throw new Error("Team member not found or cannot be changed.");
+  if (!teamRoles.includes(requestedRole as (typeof teamRoles)[number])) throw new Error("Choose a valid team role.");
+  if (manager.role === "ADMIN" && requestedRole === "ADMIN") throw new Error("Only the workspace owner can assign the admin role.");
+  member.role = requestedRole as (typeof teamRoles)[number];
+  writeStore(store);
+  addAuditLog({ workspaceId: manager.workspaceId, userId: manager.id, event: "Team Role Updated", details: `${member.email} role changed to ${member.role}` });
+  revalidatePath("/team");
+  redirect("/team");
+}
+
+export async function suspendTeamMemberAction(formData: FormData) {
+  const manager = await requireTeamManager();
+  const memberId = String(formData.get("memberId") ?? "");
+  const store = readStore();
+  const member = store.users.find((user) => user.id === memberId && user.workspaceId === manager.workspaceId);
+  if (!member || member.id === manager.id || member.role === "OWNER" || member.role === "SYSTEM_ADMIN") throw new Error("Team member not found or cannot be suspended.");
+  if (member.status !== "APPROVED" && member.status !== "SUSPENDED") throw new Error("Only active or suspended team members can be changed.");
+  member.status = member.status === "SUSPENDED" ? "APPROVED" : "SUSPENDED";
+  delete member.activeSessionId;
+  writeStore(store);
+  addAuditLog({ workspaceId: manager.workspaceId, userId: manager.id, event: "Team Member Status Updated", details: `${member.email} status changed to ${member.status}` });
+  revalidatePath("/team");
+  redirect("/team");
 }
 
 export async function saveIntegrationConfiguration(formData: FormData) {

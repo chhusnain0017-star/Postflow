@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { join } from "node:path";
 import { hashPassword, verifySuperAdminCredentials } from "@/lib/auth";
 
-export type UserRole = "SYSTEM_ADMIN" | "OWNER" | "MEMBER";
+export type UserRole = "SYSTEM_ADMIN" | "OWNER" | "ADMIN" | "EDITOR" | "APPROVER" | "MEMBER";
 export type AccessStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED" | "EXPIRED";
 
 export type UserRecord = {
@@ -39,12 +39,63 @@ export type AccessRequest = {
 export type PostRecord = {
   id: string;
   workspaceId: string;
+  createdById?: string;
   title: string;
   description: string;
   hashtags: string;
   selectedPlatforms: string[];
-  status: "DRAFT" | "PUBLISHED" | "FAILED";
+  status: "DRAFT" | "PENDING_APPROVAL" | "SCHEDULED" | "PUBLISHED" | "FAILED" | "CANCELLED";
+  campaignName?: string;
+  scheduledAt?: string;
+  scheduleTimeZone?: string;
+  approvalStatus?: "NOT_REQUIRED" | "PENDING" | "APPROVED" | "REJECTED";
+  approvedBy?: string;
+  assetIds?: string[];
+  lastError?: string;
+  publishedAt?: string;
   createdAt: string;
+};
+
+export type AssetRecord = {
+  id: string;
+  workspaceId: string;
+  uploadedById: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  tags: string[];
+  storageKey: string;
+  archivedAt?: string;
+  createdAt: string;
+};
+
+export type MetricRecord = {
+  id: string;
+  workspaceId: string;
+  postId: string;
+  platform: string;
+  campaignName?: string;
+  capturedAt: string;
+  impressions: number;
+  reach: number;
+  videoViews: number;
+  likes: number;
+  comments: number;
+  shares: number;
+  saves: number;
+  clicks: number;
+};
+
+export type TeamInviteRecord = {
+  id: string;
+  workspaceId: string;
+  email: string;
+  role: Exclude<UserRole, "SYSTEM_ADMIN" | "OWNER">;
+  tokenHash: string;
+  createdById: string;
+  createdAt: string;
+  expiresAt: string;
+  acceptedAt?: string;
 };
 
 export type SocialAccount = {
@@ -72,6 +123,9 @@ export type AppData = {
   accessRequests: AccessRequest[];
   posts: PostRecord[];
   socialAccounts: SocialAccount[];
+  assets: AssetRecord[];
+  metrics: MetricRecord[];
+  teamInvites: TeamInviteRecord[];
   logs: AuditLog[];
 };
 
@@ -79,6 +133,10 @@ const DATA_DIR = process.env.DATA_DIR || "/app/data";
 const STORE_PATH = join(DATA_DIR, "app-data.json");
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.trim();
 const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
+
+export function getAssetStorageDir() {
+  return join(DATA_DIR, "assets");
+}
 
 function defaultData(): AppData {
   const now = new Date().toISOString();
@@ -100,6 +158,9 @@ function defaultData(): AppData {
     accessRequests: [],
     posts: [],
     socialAccounts: [],
+    assets: [],
+    metrics: [],
+    teamInvites: [],
     logs: [],
   };
 }
@@ -112,16 +173,17 @@ export function readStore(): AppData {
     }
     const file = readFileSync(STORE_PATH, "utf8");
     const parsed = JSON.parse(file) as AppData;
-    const normalized = {
+    return {
       ...parsed,
       users: (parsed.users ?? []).map((user) => ({ ...user })),
+      accessRequests: parsed.accessRequests ?? [],
+      posts: parsed.posts ?? [],
+      socialAccounts: parsed.socialAccounts ?? [],
+      assets: parsed.assets ?? [],
+      metrics: parsed.metrics ?? [],
+      teamInvites: parsed.teamInvites ?? [],
+      logs: parsed.logs ?? [],
     };
-
-    if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
-      writeStore(normalized);
-    }
-
-    return normalized;
   } catch {
     return defaultData();
   }
@@ -204,7 +266,7 @@ export function createPost(post: Omit<PostRecord, "id" | "createdAt">) {
   const store = readStore();
   const entry: PostRecord = {
     ...post,
-    id: `post-${Date.now()}`,
+    id: `post-${randomUUID()}`,
     createdAt: new Date().toISOString(),
   };
   store.posts.push(entry);

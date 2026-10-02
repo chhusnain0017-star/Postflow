@@ -4,6 +4,8 @@ import assert from "node:assert/strict";
 import { createAccessDecision, createTenantScope } from "../src/lib/security-core.ts";
 import { createSessionToken, decryptProviderCredentials, encryptProviderCredentials, hashPassword, isConfiguredSuperAdminIdentity, verifyInviteCode, verifyPassword, verifySessionToken, verifySuperAdminCredentials } from "../src/lib/auth.ts";
 import { getAppRedirectUrl } from "../src/lib/redirect-url.ts";
+import { localDateTimeToUtc } from "../src/lib/time-zone.ts";
+import { groupMetricRecords, latestMetricSnapshots, sumMetricRecords } from "../src/lib/analytics.ts";
 
 test("customer can access their own post and not another workspace post", () => {
   const customerA = createTenantScope({ id: "user-a", workspaceId: "workspace-a" });
@@ -109,4 +111,25 @@ test("production redirects do not fall back to localhost when APP_URL is local",
     if (previousAppUrl === undefined) delete process.env.APP_URL;
     else process.env.APP_URL = previousAppUrl;
   }
+});
+
+test("scheduled local times convert to the correct UTC instant across DST", () => {
+  assert.equal(localDateTimeToUtc("2026-01-15T12:00", "America/New_York"), "2026-01-15T17:00:00.000Z");
+  assert.equal(localDateTimeToUtc("2026-07-15T12:00", "America/New_York"), "2026-07-15T16:00:00.000Z");
+  assert.equal(localDateTimeToUtc("not-a-time", "UTC"), null);
+  assert.equal(localDateTimeToUtc("2026-01-15T12:00", "Not/A-Timezone"), null);
+});
+
+test("analytics uses the latest real snapshot per post and platform", () => {
+  const snapshots = [
+    { id: "m1", workspaceId: "w1", postId: "p1", platform: "YouTube", campaignName: "Launch", capturedAt: "2026-01-01T00:00:00.000Z", impressions: 10, reach: 8, videoViews: 6, likes: 2, comments: 1, shares: 0, saves: 0, clicks: 1 },
+    { id: "m2", workspaceId: "w1", postId: "p1", platform: "YouTube", campaignName: "Launch", capturedAt: "2026-01-02T00:00:00.000Z", impressions: 30, reach: 24, videoViews: 18, likes: 5, comments: 2, shares: 1, saves: 1, clicks: 4 },
+    { id: "m3", workspaceId: "w1", postId: "p2", platform: "Instagram", campaignName: "Launch", capturedAt: "2026-01-02T00:00:00.000Z", impressions: 50, reach: 40, videoViews: 0, likes: 10, comments: 4, shares: 2, saves: 3, clicks: 6 },
+  ];
+  const latest = latestMetricSnapshots(snapshots);
+  assert.deepEqual(latest.map((snapshot) => snapshot.id).sort(), ["m2", "m3"]);
+  assert.equal(sumMetricRecords(latest).impressions, 80);
+  assert.deepEqual(groupMetricRecords(latest, "campaign").map((group) => ({ label: group.label, posts: group.posts, impressions: group.impressions })), [
+    { label: "Launch", posts: 2, impressions: 80 },
+  ]);
 });

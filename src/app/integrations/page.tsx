@@ -2,6 +2,7 @@ import { requireCustomer } from "@/lib/access";
 import { readStore } from "@/lib/store";
 import { saveIntegrationConfiguration } from "@/app/actions";
 import { SOCIAL_PLATFORMS } from "@/lib/platforms";
+import CustomerNav from "@/app/components/CustomerNav";
 
 export default async function IntegrationsPage() {
   const user = await requireCustomer();
@@ -11,16 +12,7 @@ export default async function IntegrationsPage() {
 
   return (
     <main className="app-shell">
-      <aside className="side-nav">
-        <div className="brand">PostFlow</div>
-        <nav>
-          <a href="/dashboard">Overview</a>
-          <a href="/create-post">Create Post</a>
-          <a href="/integrations" className="active">Integrations</a>
-          <a href="/history">History</a>
-          <a href="/settings">Settings</a>
-        </nav>
-      </aside>
+      <CustomerNav active="integrations" role={user.role} />
       <section className="content-panel">
         <h1>Social integrations</h1>
         <p className="form-notice">Save each platform app credential once. This does not connect a social account: provider authorization must also be completed before status changes to Connected. Saved credentials are encrypted and cannot be replaced for this PostFlow ID.</p>
