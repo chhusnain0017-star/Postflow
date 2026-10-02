@@ -15,6 +15,15 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "PostFlow | Multi-publisher SaaS",
   description: "Upload once and publish across social channels through approved customer accounts.",
+  metadataBase: new URL("https://postflow.taskflow.monster"),
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "PostFlow | Multi-publisher SaaS",
+    description: "Plan and manage social publishing across approved customer accounts.",
+    url: "https://postflow.taskflow.monster",
+    siteName: "PostFlow",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -14,14 +14,14 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+For local development, open [http://localhost:3000](http://localhost:3000). Production: [https://postflow.taskflow.monster](https://postflow.taskflow.monster).
 
 ## Provider setup and account terms
 
-Set `APP_URL` to the exact public HTTPS origin in Railway. Register this exact redirect URI with each standard OAuth provider:
+Set `APP_URL=https://postflow.taskflow.monster` in Railway. Register this exact redirect URI with each standard OAuth provider:
 
 ```text
-https://your-production-host/api/integrations/callback
+https://postflow.taskflow.monster/api/integrations/callback
 ```
 
 Configure each provider app's approved scopes and redirect URI before customers authorize it. Saved Client IDs and secrets and returned OAuth tokens are encrypted with `ENCRYPTION_KEY`; keep that key stable and private.
