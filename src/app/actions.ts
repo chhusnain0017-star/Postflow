@@ -3,9 +3,10 @@
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { addAuditLog, createAccessRequest, createPost, ensureConfiguredAdmin, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
-import { createSessionToken, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
+import { createSessionToken, encryptProviderCredentials, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { requireAdmin, requireCustomer, requireSignedInUser } from "@/lib/access";
+import { isSocialPlatform } from "@/lib/platforms";
 
 export async function loginAction(formData: FormData) {
   const identifier = String(formData.get("identifier") ?? formData.get("email") ?? formData.get("superAdminEmail") ?? "").trim();
@@ -240,6 +241,40 @@ export async function createCustomerPost(formData: FormData) {
   });
 
   redirect("/history");
+}
+
+export async function saveIntegrationConfiguration(formData: FormData) {
+  const user = await requireCustomer();
+  const platformName = String(formData.get("platform") ?? "");
+  const clientId = String(formData.get("clientId") ?? "").trim();
+  const clientSecret = String(formData.get("clientSecret") ?? "");
+  if (!isSocialPlatform(platformName)) throw new Error("Choose a supported social platform.");
+  if (!clientId || clientId.length > 512 || !clientSecret.trim() || clientSecret.length > 4096) {
+    throw new Error("Enter a valid Client ID and Client Secret.");
+  }
+
+  const store = readStore();
+  const existing = store.socialAccounts.find((account) => account.workspaceId === user.workspaceId
+    && account.platform === platformName);
+  if (existing) throw new Error("This platform is already configured for this account and cannot be replaced.");
+
+  store.socialAccounts.push({
+    id: `social-${randomUUID()}`,
+    workspaceId: user.workspaceId,
+    platform: platformName,
+    accountName: `${platformName} app credentials`,
+    connected: false,
+    configured: true,
+    credentialsEncrypted: encryptProviderCredentials(clientId, clientSecret),
+  });
+  writeStore(store);
+  addAuditLog({
+    workspaceId: user.workspaceId,
+    userId: user.id,
+    event: "Integration Credentials Saved",
+    details: `${platformName} app credentials saved; account authorization is still required`,
+  });
+  redirect("/integrations");
 }
 
 export async function getCurrentUser() {

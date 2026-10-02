@@ -1,5 +1,6 @@
 import { requireCustomer } from "@/lib/access";
 import { createCustomerPost } from "@/app/actions";
+import { SOCIAL_PLATFORMS } from "@/lib/platforms";
 
 export default async function CreatePostPage() {
   await requireCustomer();
@@ -32,14 +33,7 @@ export default async function CreatePostPage() {
             <input name="hashtags" placeholder="#launch #social #creator" />
           </label>
           <div className="platform-selection">
-            {[
-              "Facebook",
-              "Instagram",
-              "YouTube",
-              "X",
-              "Pinterest",
-              "Threads",
-            ].map((platform) => (
+            {SOCIAL_PLATFORMS.map((platform) => (
               <label key={platform} className="checkbox-option">
                 <input type="checkbox" name="platforms" value={platform} defaultChecked={platform === "Facebook" || platform === "YouTube"} />
                 {platform}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { addAuditLog, createAccessRequest, getUserByEmail, readStore } from "@/lib/store";
+import { addAuditLog, createAccessRequest, readStore } from "@/lib/store";
 import { hashPassword, verifyInviteCode } from "@/lib/auth";
+import { getAppRedirectUrl } from "@/lib/redirect-url";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
   const store = readStore();
   const duplicate = store.users.some((user) => user.email.toLowerCase() === email.toLowerCase() || user.username?.toLowerCase() === username.toLowerCase())
     || store.accessRequests.some((entry) => entry.email.toLowerCase() === email.toLowerCase() || entry.username?.toLowerCase() === username.toLowerCase());
-  if (duplicate || getUserByEmail(email)) {
+  if (duplicate) {
     return NextResponse.json({ error: "That email or username is already registered or awaiting review" }, { status: 409 });
   }
 
@@ -42,5 +43,5 @@ export async function POST(request: Request) {
     userId: requestRecord.id,
   });
 
-  return NextResponse.redirect(new URL("/waiting", process.env.APP_URL ?? "http://localhost:3000"));
+  return NextResponse.redirect(getAppRedirectUrl("/waiting", request.url));
 }

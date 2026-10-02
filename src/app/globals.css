@@ -461,6 +461,38 @@ textarea {
   gap: 12px;
 }
 
+.integration-setup > summary {
+  width: fit-content;
+  list-style: none;
+}
+
+.integration-setup > summary::-webkit-details-marker { display: none; }
+
+.integration-setup[open] > summary { margin-bottom: 14px; }
+
+.integration-setup .form-stack { gap: 12px; }
+
+.integration-setup .form-stack label { font-size: 0.9rem; }
+
+.integration-setup .form-stack input {
+  border-radius: 8px;
+  background: #fff;
+}
+
+.integration-status {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.65);
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .platform-header {
   display: flex;
   align-items: center;

@@ -1,4 +1,4 @@
-import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
 function getAuthSecret() {
   return process.env.AUTH_SECRET;
@@ -43,6 +43,37 @@ export function verifySuperAdminCredentials(email: string, password: string) {
   const passwordMatches = passwordBuffer.length === expectedPasswordBuffer.length
     && timingSafeEqual(passwordBuffer, expectedPasswordBuffer);
   return emailMatches && passwordMatches;
+}
+
+export function isConfiguredSuperAdminIdentity(email: string, role: string) {
+  const configuredEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+  return role === "SYSTEM_ADMIN" && Boolean(configuredEmail) && email.trim().toLowerCase() === configuredEmail;
+}
+
+function getEncryptionKey() {
+  const value = process.env.ENCRYPTION_KEY;
+  if (!value || value.length < 32) {
+    throw new Error("ENCRYPTION_KEY must contain at least 32 characters before provider credentials can be saved.");
+  }
+  return createHash("sha256").update(value).digest();
+}
+
+export function encryptProviderCredentials(clientId: string, clientSecret: string) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", getEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify({ clientId, clientSecret }), "utf8"), cipher.final()]);
+  return `v1:${iv.toString("hex")}:${cipher.getAuthTag().toString("hex")}:${encrypted.toString("hex")}`;
+}
+
+export function decryptProviderCredentials(value: string) {
+  const [version, ivHex, tagHex, encryptedHex] = value.split(":");
+  if (version !== "v1" || !ivHex || !tagHex || !encryptedHex) {
+    throw new Error("Stored provider credentials have an invalid format.");
+  }
+  const decipher = createDecipheriv("aes-256-gcm", getEncryptionKey(), Buffer.from(ivHex, "hex"));
+  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+  const decrypted = Buffer.concat([decipher.update(Buffer.from(encryptedHex, "hex")), decipher.final()]);
+  return JSON.parse(decrypted.toString("utf8")) as { clientId: string; clientSecret: string };
 }
 
 export function createSessionToken(payload: Record<string, string>) {

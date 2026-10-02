@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createSessionToken, verifyPassword } from "@/lib/auth";
 import { ensureConfiguredAdmin, readStore, upsertUser } from "@/lib/store";
+import { getAppRedirectUrl } from "@/lib/redirect-url";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
   });
 
   const destination = user.role === "SYSTEM_ADMIN" ? "/admin" : user.termsAcceptedAt ? "/dashboard" : "/onboarding";
-  const response = NextResponse.redirect(new URL(destination, process.env.APP_URL ?? "http://localhost:3000"));
+  const response = NextResponse.redirect(getAppRedirectUrl(destination, request.url));
   response.cookies.set("postflow_session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

@@ -53,6 +53,8 @@ export type SocialAccount = {
   platform: string;
   accountName: string;
   connected: boolean;
+  configured?: boolean;
+  credentialsEncrypted?: string;
   providerUserId?: string;
 };
 
@@ -190,7 +192,7 @@ export function createAccessRequest(data: Omit<AccessRequest, "id" | "createdAt"
   const store = readStore();
   const request: AccessRequest = {
     ...data,
-    id: `req-${Date.now()}`,
+    id: `req-${randomUUID()}`,
     createdAt: new Date().toISOString(),
   };
   store.accessRequests.push(request);

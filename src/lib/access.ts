@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { verifySessionToken } from "@/lib/auth";
+import { isConfiguredSuperAdminIdentity, verifySessionToken } from "@/lib/auth";
 import { readStore, type UserRecord } from "@/lib/store";
 
 export async function requireSignedInUser() {
@@ -29,6 +29,6 @@ export async function requireCustomer(options: { requireTerms?: boolean } = {}):
 
 export async function requireAdmin(): Promise<UserRecord> {
   const user = await requireSignedInUser();
-  if (user.role !== "SYSTEM_ADMIN") redirect("/dashboard");
+  if (!isConfiguredSuperAdminIdentity(user.email, user.role)) redirect("/dashboard");
   return user;
 }
