@@ -247,6 +247,34 @@ textarea {
   color: var(--muted);
 }
 
+.auth-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.secondary-btn {
+  border: 1px solid var(--border);
+  background: rgba(17, 17, 17, 0.02);
+  color: var(--ink);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.text-link {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.text-link:hover {
+  text-decoration: underline;
+}
+
 .app-shell {
   display: grid;
   grid-template-columns: 240px 1fr;

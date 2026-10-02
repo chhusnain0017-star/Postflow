@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { hashPassword } from "@/lib/auth";
 
 export type UserRole = "SYSTEM_ADMIN" | "OWNER" | "MEMBER";
 export type AccessStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED" | "EXPIRED";
@@ -67,7 +68,10 @@ export type AppData = {
   logs: AuditLog[];
 };
 
-const STORE_PATH = join(process.cwd(), "data", "app-data.json");
+const DATA_DIR = process.env.DATA_DIR || "/app/data";
+const STORE_PATH = join(DATA_DIR, "app-data.json");
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "admin@postflow.local";
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD ?? "admin123";
 
 function defaultData(): AppData {
   const now = new Date().toISOString();
@@ -76,8 +80,8 @@ function defaultData(): AppData {
       {
         id: "admin-1",
         name: "System Admin",
-        email: "admin@postflow.local",
-        passwordHash: "admin123",
+        email: SUPER_ADMIN_EMAIL,
+        passwordHash: hashPassword(SUPER_ADMIN_PASSWORD),
         role: "SYSTEM_ADMIN",
         status: "APPROVED",
         workspaceId: "workspace-admin",
@@ -96,19 +100,37 @@ function defaultData(): AppData {
 export function readStore(): AppData {
   try {
     if (!existsSync(STORE_PATH)) {
-      mkdirSync(join(process.cwd(), "data"), { recursive: true });
+      mkdirSync(DATA_DIR, { recursive: true });
       writeFileSync(STORE_PATH, JSON.stringify(defaultData(), null, 2));
     }
     const file = readFileSync(STORE_PATH, "utf8");
     const parsed = JSON.parse(file) as AppData;
-    return parsed;
+    const normalized = {
+      ...parsed,
+      users: (parsed.users ?? []).map((user) => {
+        const email = user.email.toLowerCase();
+        if (email === SUPER_ADMIN_EMAIL.toLowerCase() && !user.passwordHash.includes(":")) {
+          return { ...user, passwordHash: hashPassword(SUPER_ADMIN_PASSWORD) };
+        }
+        if (email === "customer@postflow.local" && !user.passwordHash.includes(":")) {
+          return { ...user, passwordHash: hashPassword("customer123") };
+        }
+        return user;
+      }),
+    };
+
+    if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
+      writeStore(normalized);
+    }
+
+    return normalized;
   } catch {
     return defaultData();
   }
 }
 
 export function writeStore(data: AppData) {
-  mkdirSync(join(process.cwd(), "data"), { recursive: true });
+  mkdirSync(DATA_DIR, { recursive: true });
   writeFileSync(STORE_PATH, JSON.stringify(data, null, 2));
 }
 
@@ -185,8 +207,8 @@ export function seedDemoData() {
     store.users.push({
       id: "admin-1",
       name: "System Admin",
-      email: "admin@postflow.local",
-      passwordHash: "admin123",
+      email: SUPER_ADMIN_EMAIL,
+      passwordHash: hashPassword(SUPER_ADMIN_PASSWORD),
       role: "SYSTEM_ADMIN",
       status: "APPROVED",
       workspaceId: "workspace-admin",
@@ -199,7 +221,7 @@ export function seedDemoData() {
       id: "customer-1",
       name: "Demo Customer",
       email: "customer@postflow.local",
-      passwordHash: "customer123",
+      passwordHash: hashPassword("customer123"),
       role: "OWNER",
       status: "APPROVED",
       workspaceId: "workspace-1",
