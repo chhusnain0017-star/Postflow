@@ -18,6 +18,7 @@ export type UserRecord = {
   accessStartDate?: string;
   accessExpiryDate?: string;
   termsAcceptedAt?: string;
+  legalTermsAcceptedAt?: string;
   integrationsLockedAt?: string;
   activeSessionId?: string;
   createdAt: string;
@@ -31,6 +32,7 @@ export type AccessRequest = {
   email: string;
   passwordHash: string;
   inviteCodeVerified: boolean;
+  legalTermsAcceptedAt?: string;
   status: AccessStatus;
   createdAt: string;
   reviewedAt?: string;

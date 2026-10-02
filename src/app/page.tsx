@@ -1,3 +1,5 @@
+import LegalLinks from "@/app/components/LegalLinks";
+
 export default function Home() {
   return (
     <main className="landing-shell">
@@ -46,6 +48,7 @@ export default function Home() {
         </div>
       </section>
       <p className="powered-by">Powered by <a href="https://taskflow.monster" target="_blank" rel="noreferrer">taskflow.monster</a></p>
+      <LegalLinks />
     </main>
   );
 }

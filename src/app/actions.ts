@@ -116,6 +116,7 @@ export async function requestAccessAction(formData: FormData) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const inviteCode = String(formData.get("inviteCode") ?? "").trim();
+  if (formData.get("legalTerms") !== "yes") throw new Error("Accept the Terms of Service and Privacy Policy before requesting access.");
 
   if (!name || !username || !email || !password || !inviteCode) {
     throw new Error("Name, username, email, password, and access code are required.");
@@ -145,6 +146,7 @@ export async function requestAccessAction(formData: FormData) {
     email,
     passwordHash: hashPassword(password),
     inviteCodeVerified: true,
+    legalTermsAcceptedAt: new Date().toISOString(),
     status: "PENDING",
   });
 
@@ -185,6 +187,7 @@ export async function approveAccessRequestAction(formData: FormData) {
     username: request.username,
     email: request.email,
     passwordHash: request.passwordHash,
+    legalTermsAcceptedAt: request.legalTermsAcceptedAt,
     role: "OWNER" as const,
     status: "APPROVED" as const,
     workspaceId: `workspace-${Date.now()}`,
@@ -431,6 +434,7 @@ export async function acceptTeamInviteAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  if (formData.get("legalTerms") !== "yes") throw new Error("Accept the Terms of Service and Privacy Policy before joining.");
   if (!/^[a-zA-Z0-9_.-]{3,30}$/.test(username) || name.length < 2 || name.length > 100 || password.length < 12 || password.length > 128) {
     throw new Error("Enter your name, a 3-30 character username, and a password of at least 12 characters.");
   }
@@ -451,6 +455,7 @@ export async function acceptTeamInviteAction(formData: FormData) {
     username,
     email: invite.email,
     passwordHash: hashPassword(password),
+    legalTermsAcceptedAt: new Date().toISOString(),
     role: invite.role,
     status: "APPROVED",
     workspaceId: invite.workspaceId,

@@ -10,9 +10,10 @@ export async function POST(request: Request) {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const inviteCode = String(formData.get("inviteCode") ?? "").trim();
+  const legalTerms = formData.get("legalTerms") === "yes";
 
   if (!name || name.length > 100 || !username || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    || !password || password.length < 12 || password.length > 128 || !inviteCode
+    || !password || password.length < 12 || password.length > 128 || !inviteCode || !legalTerms
     || !/^[a-zA-Z0-9_.-]{3,30}$/.test(username)) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
@@ -34,6 +35,7 @@ export async function POST(request: Request) {
     email,
     passwordHash: hashPassword(password),
     inviteCodeVerified: true,
+    legalTermsAcceptedAt: new Date().toISOString(),
     status: "PENDING",
   });
 

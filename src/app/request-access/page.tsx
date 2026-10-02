@@ -1,5 +1,6 @@
 import { requestAccessAction } from "@/app/actions";
 import Link from "next/link";
+import LegalLinks from "@/app/components/LegalLinks";
 
 export default function RequestAccessPage() {
   return (
@@ -28,12 +29,17 @@ export default function RequestAccessPage() {
             <span>Secret access code</span>
             <input name="inviteCode" type="password" autoComplete="off" required />
           </label>
+          <label className="agreement-check">
+            <input type="checkbox" name="legalTerms" value="yes" required />
+            <span>I agree to the <Link href="/terms">Terms of Service</Link> and <Link href="/privacy">Privacy Policy</Link>.</span>
+          </label>
           <button type="submit" className="primary-btn">Submit request</button>
         </form>
         <div className="auth-links">
           <a href="/login">Login</a>
           <Link href="/">Home</Link>
         </div>
+        <LegalLinks />
       </section>
     </main>
   );

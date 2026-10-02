@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { acceptTeamInviteAction } from "@/app/actions";
+import Link from "next/link";
 import { readStore } from "@/lib/store";
 
 export default async function AcceptTeamInvitePage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
@@ -21,6 +22,7 @@ export default async function AcceptTeamInvitePage({ searchParams }: { searchPar
               <label><span>Full name</span><input name="name" autoComplete="name" minLength={2} maxLength={100} required /></label>
               <label><span>Username</span><input name="username" autoComplete="username" minLength={3} maxLength={30} pattern="[A-Za-z0-9_.-]+" required /></label>
               <label><span>Password</span><input name="password" type="password" autoComplete="new-password" minLength={12} maxLength={128} required /></label>
+              <label className="agreement-check"><input type="checkbox" name="legalTerms" value="yes" required /><span>I agree to the <Link href="/terms">Terms of Service</Link> and <Link href="/privacy">Privacy Policy</Link>.</span></label>
               <button type="submit" className="primary-btn">Accept invitation</button>
             </form>
           </>

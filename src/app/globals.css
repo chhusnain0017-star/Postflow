@@ -47,6 +47,8 @@ textarea {
 
 .powered-by { margin: 8px 0 0; color: var(--muted); text-align: center; font-size: 0.86rem; }
 .powered-by a { color: var(--text); font-weight: 700; }
+.legal-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin: 18px 0 8px; color: var(--muted); font-size: 0.9rem; }
+.legal-links a { text-decoration: underline; text-underline-offset: 3px; }
 
 .hero {
   display: flex;
