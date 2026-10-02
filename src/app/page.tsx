@@ -11,6 +11,7 @@ export default function Home() {
           <div className="hero-actions">
             <a href="/login" className="primary-btn">Login</a>
             <a href="/request-access" className="secondary-btn">Request access</a>
+            <a href="/login" className="secondary-btn admin-action" data-admin="true">Admin login</a>
           </div>
         </div>
 

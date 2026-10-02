@@ -9,7 +9,7 @@ export default function LoginPage() {
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <p className="eyebrow">{isAdminMode ? "Admin access" : "Access portal"}</p>
+        <p className="eyebrow">{isAdminMode ? "Admin Access" : "Access Portal"}</p>
         <h1>{isAdminMode ? "Admin login" : "Welcome back"}</h1>
 
         <div className="auth-mode-switch" aria-label="Authentication mode selector">
