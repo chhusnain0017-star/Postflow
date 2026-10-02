@@ -41,6 +41,11 @@ export async function POST(request: Request) {
   }
 
   const store = readStore();
+  const workspaceUser = store.users.find((user) => user.workspaceId === workspaceId && user.status === "APPROVED");
+  const expiry = workspaceUser?.accessExpiryDate ? Date.parse(workspaceUser.accessExpiryDate) : Number.POSITIVE_INFINITY;
+  if (!workspaceUser || !Number.isFinite(expiry) && expiry !== Number.POSITIVE_INFINITY || Date.now() >= expiry) {
+    return NextResponse.json({ error: "Workspace contract is not active" }, { status: 403 });
+  }
   const post = store.posts.find((entry) => entry.id === postId && entry.workspaceId === workspaceId && entry.status === "PUBLISHED");
   const connected = store.socialAccounts.some((account) => account.workspaceId === workspaceId && account.platform === platform && account.connected);
   if (!post || !post.selectedPlatforms.includes(platform) || !connected) {

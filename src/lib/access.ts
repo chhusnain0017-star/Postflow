@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isConfiguredSuperAdminIdentity, verifySessionToken } from "@/lib/auth";
-import { readStore, type UserRecord } from "@/lib/store";
+import { readStore, type UserRecord, upsertUser } from "@/lib/store";
 
 export async function requireSignedInUser() {
   const token = (await cookies()).get("postflow_session")?.value;
@@ -12,10 +12,16 @@ export async function requireSignedInUser() {
 
   const user = readStore().users.find((entry) => entry.id === session.id);
   if (!user || user.activeSessionId !== session.sessionId) redirect("/login");
+  if (user.status === "EXPIRED") redirect("/waiting?status=expired");
   if (user.status !== "APPROVED") redirect("/waiting");
   if (user.accessExpiryDate) {
     const expiry = new Date(user.accessExpiryDate).getTime();
-    if (!Number.isFinite(expiry) || Date.now() > expiry) redirect("/waiting");
+    if (!Number.isFinite(expiry) || Date.now() >= expiry) {
+      user.status = "EXPIRED";
+      delete user.activeSessionId;
+      upsertUser(user);
+      redirect("/waiting?status=expired");
+    }
   }
   return user;
 }

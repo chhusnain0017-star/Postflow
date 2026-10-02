@@ -76,6 +76,24 @@ export function decryptProviderCredentials(value: string) {
   return JSON.parse(decrypted.toString("utf8")) as { clientId: string; clientSecret: string };
 }
 
+export function encryptOAuthTokens(tokens: { accessToken: string; refreshToken?: string }) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", getEncryptionKey(), iv);
+  const encrypted = Buffer.concat([cipher.update(JSON.stringify(tokens), "utf8"), cipher.final()]);
+  return `tokens-v1:${iv.toString("hex")}:${cipher.getAuthTag().toString("hex")}:${encrypted.toString("hex")}`;
+}
+
+export function decryptOAuthTokens(value: string) {
+  const [version, ivHex, tagHex, encryptedHex] = value.split(":");
+  if (version !== "tokens-v1" || !ivHex || !tagHex || !encryptedHex) {
+    throw new Error("Stored OAuth tokens have an invalid format.");
+  }
+  const decipher = createDecipheriv("aes-256-gcm", getEncryptionKey(), Buffer.from(ivHex, "hex"));
+  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+  const decrypted = Buffer.concat([decipher.update(Buffer.from(encryptedHex, "hex")), decipher.final()]);
+  return JSON.parse(decrypted.toString("utf8")) as { accessToken: string; refreshToken?: string };
+}
+
 export function createSessionToken(payload: Record<string, string>) {
   const secret = getAuthSecret();
   if (!secret) throw new Error("AUTH_SECRET must be configured before users can sign in.");

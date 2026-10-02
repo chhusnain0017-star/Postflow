@@ -16,6 +16,20 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Provider setup and account terms
+
+Set `APP_URL` to the exact public HTTPS origin in Railway. Register this exact redirect URI with each standard OAuth provider:
+
+```text
+https://your-production-host/api/integrations/callback
+```
+
+Configure each provider app's approved scopes and redirect URI before customers authorize it. Saved Client IDs and secrets and returned OAuth tokens are encrypted with `ENCRYPTION_KEY`; keep that key stable and private.
+
+WhatsApp uses Meta Embedded Signup, not the standard OAuth redirect. Set `WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID` in Railway and use the Meta App ID that owns that signup configuration. Meta app review, WhatsApp Business permissions, a working webhook, a WABA phone number, and its six-digit registration PIN are required before the app can show Connected.
+
+Customer and team access lasts through the next calendar anniversary of activation. Expired accounts are blocked until an administrator confirms renewal; payment collection is not configured in PostFlow, so administrators renew access manually after payment.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

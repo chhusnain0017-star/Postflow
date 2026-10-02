@@ -2,10 +2,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createAccessDecision, createTenantScope } from "../src/lib/security-core.ts";
-import { createSessionToken, decryptProviderCredentials, encryptProviderCredentials, hashPassword, isConfiguredSuperAdminIdentity, verifyInviteCode, verifyPassword, verifySessionToken, verifySuperAdminCredentials } from "../src/lib/auth.ts";
+import { createSessionToken, decryptOAuthTokens, decryptProviderCredentials, encryptOAuthTokens, encryptProviderCredentials, hashPassword, isConfiguredSuperAdminIdentity, verifyInviteCode, verifyPassword, verifySessionToken, verifySuperAdminCredentials } from "../src/lib/auth.ts";
 import { getAppRedirectUrl } from "../src/lib/redirect-url.ts";
 import { localDateTimeToUtc } from "../src/lib/time-zone.ts";
 import { groupMetricRecords, latestMetricSnapshots, sumMetricRecords } from "../src/lib/analytics.ts";
+import { addOneYear } from "../src/lib/billing.ts";
+import { createAuthorizationUrl } from "../src/lib/oauth.ts";
 
 test("customer can access their own post and not another workspace post", () => {
   const customerA = createTenantScope({ id: "user-a", workspaceId: "workspace-a" });
@@ -132,4 +134,28 @@ test("analytics uses the latest real snapshot per post and platform", () => {
   assert.deepEqual(groupMetricRecords(latest, "campaign").map((group) => ({ label: group.label, posts: group.posts, impressions: group.impressions })), [
     { label: "Launch", posts: 2, impressions: 80 },
   ]);
+});
+
+test("account expiry is the next calendar anniversary, not a fixed 365-day duration", () => {
+  assert.equal(addOneYear("2025-06-15T10:30:00.000Z").toISOString(), "2026-06-15T10:30:00.000Z");
+  assert.equal(addOneYear("2024-02-29T00:00:00.000Z").toISOString(), "2025-03-01T00:00:00.000Z");
+});
+
+test("OAuth tokens are encrypted and provider authorization parameters are platform-specific", () => {
+  const previousKey = process.env.ENCRYPTION_KEY;
+  process.env.ENCRYPTION_KEY = "a-test-encryption-key-with-more-than-32-characters";
+  try {
+    const encrypted = encryptOAuthTokens({ accessToken: "private-access-token", refreshToken: "private-refresh-token" });
+    assert.equal(encrypted.includes("private-access-token"), false);
+    assert.deepEqual(decryptOAuthTokens(encrypted), { accessToken: "private-access-token", refreshToken: "private-refresh-token" });
+  } finally {
+    if (previousKey === undefined) delete process.env.ENCRYPTION_KEY;
+    else process.env.ENCRYPTION_KEY = previousKey;
+  }
+
+  const xUrl = createAuthorizationUrl("X", "x-client", "https://postflow.example/callback", "random-state", "pkce-challenge");
+  assert.equal(xUrl.searchParams.get("code_challenge_method"), "S256");
+  assert.equal(xUrl.searchParams.get("state"), "random-state");
+  const tiktokUrl = createAuthorizationUrl("TikTok", "tt-client", "https://postflow.example/callback", "state");
+  assert.match(tiktokUrl.searchParams.get("scope") ?? "", /user\.info\.basic,video\.publish/);
 });

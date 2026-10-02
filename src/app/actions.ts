@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { addAuditLog, createAccessRequest, createPost, ensureConfiguredAdmin, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
-import { createSessionToken, encryptProviderCredentials, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
+import { createSessionToken, decryptProviderCredentials, encryptOAuthTokens, encryptProviderCredentials, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { requireAdmin, requireCustomer, requirePostApprover, requireSignedInUser, requireTeamManager } from "@/lib/access";
 import { isSocialPlatform } from "@/lib/platforms";
 import { localDateTimeToUtc } from "@/lib/time-zone";
+import { addOneYear } from "@/lib/billing";
 
 export async function loginAction(formData: FormData) {
   const identifier = String(formData.get("identifier") ?? formData.get("email") ?? formData.get("superAdminEmail") ?? "").trim();
@@ -30,12 +31,18 @@ export async function loginAction(formData: FormData) {
     }
   }
 
+  if (user.status === "EXPIRED") redirect("/waiting?status=expired");
   if (user.status !== "APPROVED") {
     throw new Error("Your access is not active. Please wait for approval.");
   }
   if (user.accessExpiryDate) {
     const expiry = new Date(user.accessExpiryDate).getTime();
-    if (!Number.isFinite(expiry) || Date.now() > expiry) throw new Error("This account's access has expired.");
+    if (!Number.isFinite(expiry) || Date.now() >= expiry) {
+      user.status = "EXPIRED";
+      delete user.activeSessionId;
+      upsertUser(user);
+      redirect("/waiting?status=expired");
+    }
   }
 
   const sessionId = randomUUID();
@@ -171,6 +178,7 @@ export async function approveAccessRequestAction(formData: FormData) {
     throw new Error("A customer with that email already exists.");
   }
 
+  const activatedAt = new Date();
   const user = {
     id: `user-${Date.now()}`,
     name: request.name,
@@ -180,9 +188,9 @@ export async function approveAccessRequestAction(formData: FormData) {
     role: "OWNER" as const,
     status: "APPROVED" as const,
     workspaceId: `workspace-${Date.now()}`,
-    accessStartDate: new Date().toISOString(),
-    accessExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    createdAt: new Date().toISOString(),
+    accessStartDate: activatedAt.toISOString(),
+    accessExpiryDate: addOneYear(activatedAt).toISOString(),
+    createdAt: activatedAt.toISOString(),
   };
 
   store.users.push(user);
@@ -435,7 +443,8 @@ export async function acceptTeamInviteAction(formData: FormData) {
     throw new Error("That email or username is already in use.");
   }
 
-  const now = new Date().toISOString();
+  const activatedAt = new Date();
+  const now = activatedAt.toISOString();
   store.users.push({
     id: `user-${randomUUID()}`,
     name,
@@ -446,7 +455,7 @@ export async function acceptTeamInviteAction(formData: FormData) {
     status: "APPROVED",
     workspaceId: invite.workspaceId,
     accessStartDate: now,
-    accessExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+    accessExpiryDate: addOneYear(activatedAt).toISOString(),
     createdAt: now,
   });
   invite.acceptedAt = now;
@@ -520,6 +529,83 @@ export async function saveIntegrationConfiguration(formData: FormData) {
   redirect("/integrations");
 }
 
+export async function completeWhatsAppSignupAction(
+  _previousState: { error?: string } | null,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const user = await requireCustomer();
+  const authorizationCode = String(formData.get("authorizationCode") ?? "");
+  const businessAccountId = String(formData.get("businessAccountId") ?? "");
+  const phoneNumberId = String(formData.get("phoneNumberId") ?? "");
+  const pin = String(formData.get("pin") ?? "");
+  if (authorizationCode.length < 10 || !/^\d{5,25}$/.test(businessAccountId)
+    || !/^\d{5,25}$/.test(phoneNumberId) || !/^\d{6}$/.test(pin)) {
+    return { error: "WhatsApp did not return valid business assets, or the 6-digit registration PIN is missing." };
+  }
+
+  const store = readStore();
+  const account = store.socialAccounts.find((entry) => entry.workspaceId === user.workspaceId && entry.platform === "WhatsApp");
+  if (!account?.credentialsEncrypted || account.connected) return { error: "Save WhatsApp credentials first; connected accounts cannot be replaced." };
+
+  let connectedAccountName: string;
+  try {
+    const { clientId, clientSecret } = decryptProviderCredentials(account.credentialsEncrypted);
+    const graphVersion = process.env.META_GRAPH_API_VERSION ?? "v25.0";
+    const exchangeUrl = new URL(`https://graph.facebook.com/${graphVersion}/oauth/access_token`);
+    exchangeUrl.searchParams.set("client_id", clientId);
+    exchangeUrl.searchParams.set("client_secret", clientSecret);
+    exchangeUrl.searchParams.set("code", authorizationCode);
+    const exchangeResponse = await fetch(exchangeUrl, { signal: AbortSignal.timeout(20000) });
+    const tokenPayload = await exchangeResponse.json() as { access_token?: string; expires_in?: number; error?: { message?: string } };
+    if (!exchangeResponse.ok || !tokenPayload.access_token) throw new Error(tokenPayload.error?.message ?? "WhatsApp token exchange failed.");
+
+    const phoneUrl = new URL(`https://graph.facebook.com/${graphVersion}/${businessAccountId}/phone_numbers`);
+    phoneUrl.searchParams.set("fields", "id,display_phone_number,verified_name");
+    const phoneResponse = await fetch(phoneUrl, { headers: { Authorization: `Bearer ${tokenPayload.access_token}` }, signal: AbortSignal.timeout(20000) });
+    const phonePayload = await phoneResponse.json() as { data?: Array<{ id?: string; display_phone_number?: string; verified_name?: string }>; error?: { message?: string } };
+    const phone = phonePayload.data?.find((entry) => entry.id === phoneNumberId);
+    if (!phoneResponse.ok || !phone) throw new Error(phonePayload.error?.message ?? "WhatsApp phone number was not found in the selected business account.");
+
+    const registerUrl = `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/register`;
+    const registerResponse = await fetch(registerUrl, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${tokenPayload.access_token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ messaging_product: "whatsapp", pin }),
+      signal: AbortSignal.timeout(20000),
+    });
+    const registerPayload = await registerResponse.json() as { success?: boolean; error?: { message?: string } };
+    if (!registerResponse.ok || registerPayload.success !== true) throw new Error(registerPayload.error?.message ?? "WhatsApp phone registration failed.");
+
+    const subscribeResponse = await fetch(`https://graph.facebook.com/${graphVersion}/${businessAccountId}/subscribed_apps`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${tokenPayload.access_token}` },
+      signal: AbortSignal.timeout(20000),
+    });
+    const subscribePayload = await subscribeResponse.json() as { success?: boolean; error?: { message?: string } };
+    if (!subscribeResponse.ok || subscribePayload.success !== true) throw new Error(subscribePayload.error?.message ?? "WhatsApp webhook subscription failed.");
+
+    account.connected = true;
+    account.connectedAt = new Date().toISOString();
+    account.providerUserId = businessAccountId;
+    account.businessAccountId = businessAccountId;
+    account.phoneNumberId = phoneNumberId;
+    account.accountName = phone.display_phone_number ?? phone.verified_name ?? "WhatsApp Business";
+    account.accessTokenEncrypted = encryptOAuthTokens({ accessToken: tokenPayload.access_token });
+    account.tokenExpiresAt = typeof tokenPayload.expires_in === "number"
+      ? new Date(Date.now() + tokenPayload.expires_in * 1000).toISOString()
+      : undefined;
+    account.grantedScopes = ["whatsapp_business_management", "whatsapp_business_messaging"];
+    writeStore(store);
+    connectedAccountName = account.accountName;
+  } catch {
+    return { error: "WhatsApp setup did not finish. Verify the Meta app review, business permissions, phone PIN, webhook URL, and credentials, then retry." };
+  }
+
+  addAuditLog({ workspaceId: user.workspaceId, userId: user.id, event: "WhatsApp Business Connected", details: `Connected ${connectedAccountName}` });
+  revalidatePath("/integrations");
+  redirect("/integrations?connection=connected");
+}
+
 export async function getCurrentUser() {
   const cookieStore = await cookies();
   const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
@@ -529,4 +615,32 @@ export async function getCurrentUser() {
 
 export async function ensureDemoSeed() {
   seedDemoData();
+}
+
+export async function renewCustomerContractAction(formData: FormData) {
+  const administrator = await requireAdmin();
+  const customerId = String(formData.get("customerId") ?? "");
+  const store = readStore();
+  const customer = store.users.find((entry) => entry.id === customerId && entry.role !== "SYSTEM_ADMIN");
+  if (!customer) throw new Error("Customer account not found.");
+
+  const expiry = customer.accessExpiryDate ? Date.parse(customer.accessExpiryDate) : NaN;
+  if (customer.status !== "EXPIRED" && (!Number.isFinite(expiry) || expiry > Date.now())) {
+    throw new Error("Only expired customer contracts can be renewed.");
+  }
+
+  const activatedAt = new Date();
+  customer.accessStartDate = activatedAt.toISOString();
+  customer.accessExpiryDate = addOneYear(activatedAt).toISOString();
+  customer.status = "APPROVED";
+  delete customer.activeSessionId;
+  writeStore(store);
+  addAuditLog({
+    workspaceId: customer.workspaceId,
+    userId: administrator.id,
+    event: "Customer Contract Renewed",
+    details: `${customer.email} renewed through ${customer.accessExpiryDate}`,
+  });
+  revalidatePath("/admin/customers");
+  redirect("/admin/customers");
 }

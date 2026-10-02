@@ -106,7 +106,26 @@ export type SocialAccount = {
   connected: boolean;
   configured?: boolean;
   credentialsEncrypted?: string;
+  accessTokenEncrypted?: string;
+  refreshTokenEncrypted?: string;
+  tokenExpiresAt?: string;
+  connectedAt?: string;
   providerUserId?: string;
+  grantedScopes?: string[];
+  businessAccountId?: string;
+  phoneNumberId?: string;
+};
+
+export type OAuthStateRecord = {
+  id: string;
+  stateHash: string;
+  workspaceId: string;
+  userId: string;
+  accountId: string;
+  platform: string;
+  codeVerifierEncrypted?: string;
+  createdAt: string;
+  expiresAt: string;
 };
 
 export type AuditLog = {
@@ -123,6 +142,7 @@ export type AppData = {
   accessRequests: AccessRequest[];
   posts: PostRecord[];
   socialAccounts: SocialAccount[];
+  oauthStates: OAuthStateRecord[];
   assets: AssetRecord[];
   metrics: MetricRecord[];
   teamInvites: TeamInviteRecord[];
@@ -158,6 +178,7 @@ function defaultData(): AppData {
     accessRequests: [],
     posts: [],
     socialAccounts: [],
+    oauthStates: [],
     assets: [],
     metrics: [],
     teamInvites: [],
@@ -179,6 +200,7 @@ export function readStore(): AppData {
       accessRequests: parsed.accessRequests ?? [],
       posts: parsed.posts ?? [],
       socialAccounts: parsed.socialAccounts ?? [],
+      oauthStates: parsed.oauthStates ?? [],
       assets: parsed.assets ?? [],
       metrics: parsed.metrics ?? [],
       teamInvites: parsed.teamInvites ?? [],

@@ -31,13 +31,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid admin credentials or Super Admin environment is not configured" }, { status: 401 });
   }
 
+  if (user.status === "EXPIRED") return NextResponse.redirect(getAppRedirectUrl("/waiting?status=expired", request.url));
   if (user.status !== "APPROVED") {
     return NextResponse.json({ error: "Account not active" }, { status: 403 });
   }
   if (user.accessExpiryDate) {
     const expiry = new Date(user.accessExpiryDate).getTime();
-    if (!Number.isFinite(expiry) || Date.now() > expiry) {
-      return NextResponse.json({ error: "Account access expired" }, { status: 403 });
+    if (!Number.isFinite(expiry) || Date.now() >= expiry) {
+      user.status = "EXPIRED";
+      delete user.activeSessionId;
+      upsertUser(user);
+      return NextResponse.redirect(getAppRedirectUrl("/waiting?status=expired", request.url));
     }
   }
 

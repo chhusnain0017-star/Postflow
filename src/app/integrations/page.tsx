@@ -1,11 +1,12 @@
 import { requireCustomer } from "@/lib/access";
 import { readStore } from "@/lib/store";
-import { saveIntegrationConfiguration } from "@/app/actions";
 import { SOCIAL_PLATFORMS } from "@/lib/platforms";
 import CustomerNav from "@/app/components/CustomerNav";
+import IntegrationSetupModal from "@/app/integrations/IntegrationSetupModal";
 
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ connection?: string }> }) {
   const user = await requireCustomer();
+  const { connection } = await searchParams;
   const store = readStore();
 
   const connected = store.socialAccounts.filter((account) => account.workspaceId === user.workspaceId);
@@ -16,6 +17,9 @@ export default async function IntegrationsPage() {
       <section className="content-panel">
         <h1>Social integrations</h1>
         <p className="form-notice">Save each platform app credential once. This does not connect a social account: provider authorization must also be completed before status changes to Connected. Saved credentials are encrypted and cannot be replaced for this PostFlow ID.</p>
+        {connection === "connected" && <p className="integration-feedback success" role="status">Account authorization completed successfully.</p>}
+        {connection === "failed" && <p className="integration-feedback error" role="alert">Authorization could not be verified. Check the app settings, callback URL, and requested permissions, then try again.</p>}
+        {connection === "denied" && <p className="integration-feedback" role="status">Authorization was cancelled. Your account remains disconnected.</p>}
         <div className="platform-grid">
           {SOCIAL_PLATFORMS.map((platform) => {
             const account = connected.find((entry) => entry.platform === platform);
@@ -30,23 +34,13 @@ export default async function IntegrationsPage() {
                 {account?.connected ? (
                   <span className="integration-status">Connected</span>
                 ) : isConfigured ? (
-                  <span className="integration-status">Credentials saved</span>
+                  platform === "WhatsApp" ? (
+                    <a href="/integrations/whatsapp" className="primary-btn">Connect WhatsApp Business</a>
+                  ) : (
+                    <a href={`/api/integrations/${encodeURIComponent(platform.toLowerCase())}/authorize`} className="primary-btn">Authorize / Connect Account</a>
+                  )
                 ) : (
-                  <details className="integration-setup">
-                    <summary className="primary-btn">Setup required</summary>
-                    <form action={saveIntegrationConfiguration} className="form-stack">
-                      <input type="hidden" name="platform" value={platform} />
-                      <label>
-                        <span>Client ID</span>
-                        <input name="clientId" autoComplete="off" required maxLength={512} />
-                      </label>
-                      <label>
-                        <span>Client Secret</span>
-                        <input name="clientSecret" type="password" autoComplete="new-password" required maxLength={4096} />
-                      </label>
-                      <button type="submit" className="primary-btn">Save credentials</button>
-                    </form>
-                  </details>
+                  <IntegrationSetupModal platform={platform} />
                 )}
               </div>
             );
