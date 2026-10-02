@@ -1,18 +1,8 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { requireCustomer } from "@/lib/access";
 import { createCustomerPost } from "@/app/actions";
-import { readStore, seedDemoData } from "@/lib/store";
-import { verifySessionToken } from "@/lib/auth";
 
 export default async function CreatePostPage() {
-  const cookieStore = await cookies();
-  const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
-  if (!session) redirect("/login");
-
-  seedDemoData();
-  const store = readStore();
-  const user = store.users.find((entry) => entry.id === session.id) ?? null;
-  if (!user || user.status !== "APPROVED") redirect("/waiting");
+  await requireCustomer();
 
   return (
     <main className="app-shell">
@@ -56,7 +46,8 @@ export default async function CreatePostPage() {
               </label>
             ))}
           </div>
-          <button type="submit" className="primary-btn">Publish now</button>
+          <p className="form-notice">Social publishing will be available after platform OAuth is configured. Your submission is saved as a draft.</p>
+          <button type="submit" className="primary-btn">Save draft</button>
         </form>
       </section>
     </main>

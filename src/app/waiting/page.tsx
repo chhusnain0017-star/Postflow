@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function WaitingPage() {
   return (
     <main className="auth-shell">
@@ -5,7 +7,7 @@ export default function WaitingPage() {
         <p className="eyebrow">Approval status</p>
         <h1>Your request is pending</h1>
         <p>Your account is waiting for administrator approval. Please contact the platform owner if needed.</p>
-        <a href="/" className="primary-btn inline-link">Back home</a>
+        <Link href="/" className="primary-btn inline-link">Back home</Link>
       </section>
     </main>
   );

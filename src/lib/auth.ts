@@ -1,30 +1,47 @@
-import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 
-const SECRET = process.env.AUTH_SECRET ?? "dev-secret-postflow";
+function getAuthSecret() {
+  return process.env.AUTH_SECRET;
+}
 
 export function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
-  const hash = createHash("sha256").update(`${salt}:${password}`).digest("hex");
+  const hash = scryptSync(password, salt, 64).toString("hex");
   return `${salt}:${hash}`;
 }
 
 export function verifyPassword(password: string, storedHash: string) {
   const [salt, hash] = storedHash.split(":");
   if (!salt || !hash) return false;
-  const computed = createHash("sha256").update(`${salt}:${password}`).digest("hex");
-  return timingSafeEqual(Buffer.from(hash), Buffer.from(computed));
+  const computed = hash.length === 64
+    ? createHash("sha256").update(`${salt}:${password}`).digest("hex")
+    : scryptSync(password, salt, 64).toString("hex");
+  const expectedBuffer = Buffer.from(hash);
+  const computedBuffer = Buffer.from(computed);
+  return expectedBuffer.length === computedBuffer.length && timingSafeEqual(expectedBuffer, computedBuffer);
+}
+
+export function verifyInviteCode(code: string) {
+  const configuredCode = process.env.ACCESS_REQUEST_CODE;
+  if (!configuredCode || !code) return false;
+  const providedDigest = createHash("sha256").update(code.trim()).digest();
+  const configuredDigest = createHash("sha256").update(configuredCode.trim()).digest();
+  return timingSafeEqual(providedDigest, configuredDigest);
 }
 
 export function createSessionToken(payload: Record<string, string>) {
+  const secret = getAuthSecret();
+  if (!secret) throw new Error("AUTH_SECRET must be configured before users can sign in.");
   const value = Buffer.from(JSON.stringify(payload)).toString("base64url");
-  return `${value}.${createHash("sha256").update(`${value}:${SECRET}`).digest("hex")}`;
+  return `${value}.${createHash("sha256").update(`${value}:${secret}`).digest("hex")}`;
 }
 
 export function verifySessionToken(token: string | undefined) {
-  if (!token) return null;
+  const secret = getAuthSecret();
+  if (!token || !secret) return null;
   const [payloadPart, signature] = token.split(".");
-  if (!payloadPart || !signature) return null;
-  const expected = createHash("sha256").update(`${payloadPart}:${SECRET}`).digest("hex");
+  if (!payloadPart || !signature || signature.length !== 64) return null;
+  const expected = createHash("sha256").update(`${payloadPart}:${secret}`).digest("hex");
   if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
 
   try {

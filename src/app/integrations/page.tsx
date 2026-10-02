@@ -1,19 +1,11 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { readStore, seedDemoData } from "@/lib/store";
-import { verifySessionToken } from "@/lib/auth";
+import { requireCustomer } from "@/lib/access";
+import { readStore } from "@/lib/store";
 
 const platforms = ["Facebook", "Instagram", "YouTube", "TikTok", "X", "Pinterest", "Threads"];
 
 export default async function IntegrationsPage() {
-  const cookieStore = await cookies();
-  const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
-  if (!session) redirect("/login");
-
-  seedDemoData();
+  const user = await requireCustomer();
   const store = readStore();
-  const user = store.users.find((entry) => entry.id === session.id) ?? null;
-  if (!user || user.status !== "APPROVED") redirect("/waiting");
 
   const connected = store.socialAccounts.filter((account) => account.workspaceId === user.workspaceId);
 
@@ -31,6 +23,7 @@ export default async function IntegrationsPage() {
       </aside>
       <section className="content-panel">
         <h1>Social integrations</h1>
+        <p className="form-notice">Provider sign-in is not configured yet. Connect actions stay disabled until the official OAuth credentials and secure return routes are installed. Once connected, accounts must remain fixed to this PostFlow ID.</p>
         <div className="platform-grid">
           {platforms.map((platform) => {
             const account = connected.find((entry) => entry.platform === platform);
@@ -41,8 +34,8 @@ export default async function IntegrationsPage() {
                   <strong>{platform}</strong>
                 </div>
                 <p>{account?.connected ? "Connected" : "Not connected"}</p>
-                <button type="button" className={account?.connected ? "secondary-btn" : "primary-btn"}>
-                  {account?.connected ? "Connected" : "Connect"}
+                <button type="button" className={account?.connected ? "secondary-btn" : "primary-btn"} disabled={!account?.connected}>
+                  {account?.connected ? "Connected" : "Setup required"}
                 </button>
               </div>
             );

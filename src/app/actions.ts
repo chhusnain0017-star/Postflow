@@ -1,15 +1,20 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { addAuditLog, createAccessRequest, createPost, getUserByEmail, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
-import { createSessionToken, hashPassword, verifyPassword } from "@/lib/auth";
+import { addAuditLog, createAccessRequest, createPost, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
+import { createSessionToken, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
 import { cookies } from "next/headers";
+import { requireAdmin, requireCustomer, requireSignedInUser } from "@/lib/access";
 
 export async function loginAction(formData: FormData) {
-  const email = String(formData.get("email") ?? "").trim();
+  const identifier = String(formData.get("identifier") ?? formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const loginMode = String(formData.get("loginMode") ?? "customer");
   const store = readStore();
-  const user = store.users.find((entry) => entry.email.toLowerCase() === email.toLowerCase());
+  if (loginMode !== "admin" && loginMode !== "customer") throw new Error("Invalid login option.");
+  const user = store.users.find((entry) => entry.email.toLowerCase() === identifier.toLowerCase()
+    || (loginMode === "customer" && entry.username?.toLowerCase() === identifier.toLowerCase()));
 
   if (!user || !verifyPassword(password, user.passwordHash)) {
     throw new Error("Invalid email or password.");
@@ -18,12 +23,22 @@ export async function loginAction(formData: FormData) {
   if (user.status !== "APPROVED") {
     throw new Error("Your access is not active. Please wait for approval.");
   }
+  if (user.accessExpiryDate) {
+    const expiry = new Date(user.accessExpiryDate).getTime();
+    if (!Number.isFinite(expiry) || Date.now() > expiry) throw new Error("This account's access has expired.");
+  }
 
+  if ((loginMode === "admin") !== (user.role === "SYSTEM_ADMIN")) {
+    throw new Error("Use the matching login option for this account.");
+  }
+
+  const sessionId = randomUUID();
   const token = createSessionToken({
     id: user.id,
     email: user.email,
     workspaceId: user.workspaceId,
     role: user.role,
+    sessionId,
   });
 
   const cookieStore = await cookies();
@@ -36,6 +51,7 @@ export async function loginAction(formData: FormData) {
   });
 
   user.lastLogin = new Date().toISOString();
+  user.activeSessionId = sessionId;
   upsertUser(user);
   addAuditLog({
     workspaceId: user.workspaceId,
@@ -47,36 +63,75 @@ export async function loginAction(formData: FormData) {
   if (user.role === "SYSTEM_ADMIN") {
     redirect("/admin");
   }
+  if (!user.termsAcceptedAt) redirect("/onboarding");
   redirect("/dashboard");
 }
 
 export async function logoutAction() {
   const cookieStore = await cookies();
+  const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
+  const user = session ? readStore().users.find((entry) => entry.id === session.id) : null;
+  if (user && user.activeSessionId === session?.sessionId) {
+    delete user.activeSessionId;
+    upsertUser(user);
+  }
   cookieStore.delete("postflow_session");
   redirect("/");
 }
 
+export async function acceptTermsAction(formData: FormData) {
+  if (formData.get("acceptTerms") !== "yes") throw new Error("Accept the terms before continuing.");
+  const user = await requireSignedInUser();
+  if (user.role === "SYSTEM_ADMIN") throw new Error("Customer terms do not apply to administrator accounts.");
+
+  if (!user.termsAcceptedAt) {
+    user.termsAcceptedAt = new Date().toISOString();
+    upsertUser(user);
+    addAuditLog({
+      workspaceId: user.workspaceId,
+      userId: user.id,
+      event: "Integration Terms Accepted",
+      details: `${user.username ?? user.name} accepted the one-time integration terms`,
+    });
+  }
+  redirect("/dashboard");
+}
+
 export async function requestAccessAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
+  const username = String(formData.get("username") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const paymentReference = String(formData.get("paymentReference") ?? "").trim();
+  const inviteCode = String(formData.get("inviteCode") ?? "").trim();
 
-  if (!name || !email || !password || !paymentReference) {
-    throw new Error("Name, email, password, and payment reference are required.");
+  if (!name || !username || !email || !password || !inviteCode) {
+    throw new Error("Name, username, email, password, and access code are required.");
   }
 
-  const existing = getUserByEmail(email);
-  if (existing) {
-    throw new Error("An account with that email already exists.");
+  if (name.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    || !/^[a-zA-Z0-9_.-]{3,30}$/.test(username) || password.length < 12 || password.length > 128) {
+    throw new Error("Choose a 3-30 character username and a password with at least 12 characters.");
+  }
+
+  if (!verifyInviteCode(inviteCode)) {
+    throw new Error("That access code is invalid or access requests are not available.");
+  }
+
+  const store = readStore();
+  const emailTaken = store.users.some((user) => user.email.toLowerCase() === email.toLowerCase())
+    || store.accessRequests.some((request) => request.email.toLowerCase() === email.toLowerCase());
+  const usernameTaken = store.users.some((user) => user.username?.toLowerCase() === username.toLowerCase())
+    || store.accessRequests.some((request) => request.username?.toLowerCase() === username.toLowerCase());
+  if (emailTaken || usernameTaken) {
+    throw new Error("That email or username is already registered or awaiting review.");
   }
 
   const request = createAccessRequest({
     name,
+    username,
     email,
     passwordHash: hashPassword(password),
-    paymentReference,
-    paymentProof: "manual-proof-provided",
+    inviteCodeVerified: true,
     status: "PENDING",
   });
 
@@ -89,7 +144,12 @@ export async function requestAccessAction(formData: FormData) {
   redirect("/waiting");
 }
 
+async function requireSystemAdmin() {
+  return requireAdmin();
+}
+
 export async function approveAccessRequestAction(formData: FormData) {
+  await requireSystemAdmin();
   const requestId = String(formData.get("requestId") ?? "").trim();
   const store = readStore();
   const request = store.accessRequests.find((entry) => entry.id === requestId);
@@ -97,8 +157,10 @@ export async function approveAccessRequestAction(formData: FormData) {
   if (!request) {
     throw new Error("Access request not found.");
   }
+  if (!request.inviteCodeVerified) throw new Error("This request did not pass access-code verification.");
 
-  const existing = store.users.find((entry) => entry.email.toLowerCase() === request.email.toLowerCase());
+  const existing = store.users.find((entry) => entry.email.toLowerCase() === request.email.toLowerCase()
+    || entry.username?.toLowerCase() === request.username?.toLowerCase());
   if (existing) {
     throw new Error("A customer with that email already exists.");
   }
@@ -106,6 +168,7 @@ export async function approveAccessRequestAction(formData: FormData) {
   const user = {
     id: `user-${Date.now()}`,
     name: request.name,
+    username: request.username,
     email: request.email,
     passwordHash: request.passwordHash,
     role: "OWNER" as const,
@@ -130,6 +193,7 @@ export async function approveAccessRequestAction(formData: FormData) {
 }
 
 export async function rejectAccessRequestAction(formData: FormData) {
+  await requireSystemAdmin();
   const requestId = String(formData.get("requestId") ?? "").trim();
   const store = readStore();
   const request = store.accessRequests.find((entry) => entry.id === requestId);
@@ -154,27 +218,23 @@ export async function createCustomerPost(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const hashtags = String(formData.get("hashtags") ?? "").trim();
   const platforms = formData.getAll("platforms") as string[];
-  const session = (await cookies()).get("postflow_session")?.value;
-  const payload = session ? JSON.parse(Buffer.from(session.split(".")[0], "base64url").toString("utf8")) : null;
-
-  if (!payload) {
-    throw new Error("You must be logged in to publish.");
-  }
+  const user = await requireCustomer();
+  if (!title || !description) throw new Error("A title and description are required.");
 
   const post = createPost({
-    workspaceId: payload.workspaceId,
+    workspaceId: user.workspaceId,
     title,
     description,
     hashtags,
     selectedPlatforms: platforms,
-    status: "PUBLISHED",
+    status: "DRAFT",
   });
 
   addAuditLog({
-    workspaceId: payload.workspaceId,
-    userId: payload.id,
-    event: "Post Created",
-    details: `Post ${post.id} created for ${payload.workspaceId}`,
+    workspaceId: user.workspaceId,
+    userId: user.id,
+    event: "Post Draft Created",
+    details: `Post ${post.id} saved as a draft for ${user.workspaceId}`,
   });
 
   redirect("/history");
@@ -182,12 +242,9 @@ export async function createCustomerPost(formData: FormData) {
 
 export async function getCurrentUser() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("postflow_session")?.value;
-  if (!token) return null;
-
-  const payload = JSON.parse(Buffer.from(token.split(".")[0], "base64url").toString("utf8"));
-  const user = readStore().users.find((entry) => entry.id === payload.id);
-  return user ?? null;
+  const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
+  const user = session ? readStore().users.find((entry) => entry.id === session.id) : null;
+  return user && user.activeSessionId === session?.sessionId ? user : null;
 }
 
 export async function ensureDemoSeed() {

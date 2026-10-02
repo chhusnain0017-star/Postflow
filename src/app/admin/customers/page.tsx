@@ -1,16 +1,9 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { readStore, seedDemoData } from "@/lib/store";
-import { verifySessionToken } from "@/lib/auth";
+import { requireAdmin } from "@/lib/access";
+import { readStore } from "@/lib/store";
 
 export default async function AdminCustomersPage() {
-  const cookieStore = await cookies();
-  const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
-  if (!session) redirect("/login");
-  seedDemoData();
+  await requireAdmin();
   const store = readStore();
-  const user = store.users.find((entry) => entry.id === session.id);
-  if (!user || user.role !== "SYSTEM_ADMIN") redirect("/");
 
   return (
     <main className="app-shell">

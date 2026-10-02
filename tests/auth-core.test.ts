@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createAccessDecision, createTenantScope } from "../src/lib/security-core.ts";
+import { createSessionToken, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "../src/lib/auth.ts";
 
 test("customer can access their own post and not another workspace post", () => {
   const customerA = createTenantScope({ id: "user-a", workspaceId: "workspace-a" });
@@ -26,4 +27,38 @@ test("expired access is denied for dashboard access", () => {
 
   assert.equal(expired.allowed, false);
   assert.equal(expired.reason, "access-expired");
+});
+
+test("passwords are salted and verified without accepting a wrong password", () => {
+  const firstHash = hashPassword("a-long-customer-password");
+  const secondHash = hashPassword("a-long-customer-password");
+
+  assert.notEqual(firstHash, secondHash);
+  assert.equal(verifyPassword("a-long-customer-password", firstHash), true);
+  assert.equal(verifyPassword("wrong-password", firstHash), false);
+});
+
+test("invite codes are checked against the server-only configured value", () => {
+  const previousCode = process.env.ACCESS_REQUEST_CODE;
+  process.env.ACCESS_REQUEST_CODE = "private-test-code";
+  try {
+    assert.equal(verifyInviteCode("private-test-code"), true);
+    assert.equal(verifyInviteCode("incorrect-code"), false);
+  } finally {
+    if (previousCode === undefined) delete process.env.ACCESS_REQUEST_CODE;
+    else process.env.ACCESS_REQUEST_CODE = previousCode;
+  }
+});
+
+test("session tokens reject tampering and work only with the configured secret", () => {
+  const previousSecret = process.env.AUTH_SECRET;
+  process.env.AUTH_SECRET = "a-long-test-session-secret";
+  try {
+    const token = createSessionToken({ id: "user-1", sessionId: "session-1" });
+    assert.equal(verifySessionToken(token)?.id, "user-1");
+    assert.equal(verifySessionToken(`${token}x`), null);
+  } finally {
+    if (previousSecret === undefined) delete process.env.AUTH_SECRET;
+    else process.env.AUTH_SECRET = previousSecret;
+  }
 });

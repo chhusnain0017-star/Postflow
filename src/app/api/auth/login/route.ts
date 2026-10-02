@@ -1,13 +1,19 @@
+import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createSessionToken, verifyPassword } from "@/lib/auth";
-import { readStore } from "@/lib/store";
+import { readStore, upsertUser } from "@/lib/store";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const email = String(formData.get("email") ?? "").trim();
+  const identifier = String(formData.get("identifier") ?? formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const loginMode = String(formData.get("loginMode") ?? "customer");
 
-  const user = readStore().users.find((entry) => entry.email.toLowerCase() === email.toLowerCase());
+  if (loginMode !== "admin" && loginMode !== "customer") {
+    return NextResponse.json({ error: "Invalid login option" }, { status: 400 });
+  }
+  const user = readStore().users.find((entry) => entry.email.toLowerCase() === identifier.toLowerCase()
+    || (loginMode === "customer" && entry.username?.toLowerCase() === identifier.toLowerCase()));
   if (!user || !verifyPassword(password, user.passwordHash)) {
     return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
   }
@@ -15,15 +21,32 @@ export async function POST(request: Request) {
   if (user.status !== "APPROVED") {
     return NextResponse.json({ error: "Account not active" }, { status: 403 });
   }
+  if (user.accessExpiryDate) {
+    const expiry = new Date(user.accessExpiryDate).getTime();
+    if (!Number.isFinite(expiry) || Date.now() > expiry) {
+      return NextResponse.json({ error: "Account access expired" }, { status: 403 });
+    }
+  }
+
+  if ((loginMode === "admin") !== (user.role === "SYSTEM_ADMIN")) {
+    return NextResponse.json({ error: "Use the matching login option for this account" }, { status: 403 });
+  }
+
+  const sessionId = randomUUID();
+  user.activeSessionId = sessionId;
+  user.lastLogin = new Date().toISOString();
+  upsertUser(user);
 
   const token = createSessionToken({
     id: user.id,
     email: user.email,
     workspaceId: user.workspaceId,
     role: user.role,
+    sessionId,
   });
 
-  const response = NextResponse.redirect(new URL(user.role === "SYSTEM_ADMIN" ? "/admin" : "/dashboard", process.env.APP_URL ?? "http://localhost:3000"));
+  const destination = user.role === "SYSTEM_ADMIN" ? "/admin" : user.termsAcceptedAt ? "/dashboard" : "/onboarding";
+  const response = NextResponse.redirect(new URL(destination, process.env.APP_URL ?? "http://localhost:3000"));
   response.cookies.set("postflow_session", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

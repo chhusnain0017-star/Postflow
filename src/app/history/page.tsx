@@ -1,17 +1,9 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { readStore, seedDemoData } from "@/lib/store";
-import { verifySessionToken } from "@/lib/auth";
+import { requireCustomer } from "@/lib/access";
+import { readStore } from "@/lib/store";
 
 export default async function HistoryPage() {
-  const cookieStore = await cookies();
-  const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
-  if (!session) redirect("/login");
-
-  seedDemoData();
+  const user = await requireCustomer();
   const store = readStore();
-  const user = store.users.find((entry) => entry.id === session.id) ?? null;
-  if (!user || user.status !== "APPROVED") redirect("/waiting");
 
   const posts = store.posts.filter((post) => post.workspaceId === user.workspaceId);
 

@@ -8,6 +8,7 @@ export type AccessStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED" | "
 export type UserRecord = {
   id: string;
   name: string;
+  username?: string;
   email: string;
   passwordHash: string;
   role: UserRole;
@@ -15,6 +16,9 @@ export type UserRecord = {
   workspaceId: string;
   accessStartDate?: string;
   accessExpiryDate?: string;
+  termsAcceptedAt?: string;
+  integrationsLockedAt?: string;
+  activeSessionId?: string;
   createdAt: string;
   lastLogin?: string;
 };
@@ -22,10 +26,10 @@ export type UserRecord = {
 export type AccessRequest = {
   id: string;
   name: string;
+  username: string;
   email: string;
   passwordHash: string;
-  paymentReference: string;
-  paymentProof?: string;
+  inviteCodeVerified: boolean;
   status: AccessStatus;
   createdAt: string;
   reviewedAt?: string;
@@ -70,13 +74,13 @@ export type AppData = {
 
 const DATA_DIR = process.env.DATA_DIR || "/app/data";
 const STORE_PATH = join(DATA_DIR, "app-data.json");
-const SUPER_ADMIN_EMAIL = (process.env.SUPER_ADMIN_EMAIL ?? "admin@postflow.local").trim();
-const SUPER_ADMIN_PASSWORD = (process.env.SUPER_ADMIN_PASSWORD ?? "admin123").trim();
+const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL?.trim();
+const SUPER_ADMIN_PASSWORD = process.env.SUPER_ADMIN_PASSWORD;
 
 function defaultData(): AppData {
   const now = new Date().toISOString();
   return {
-    users: [
+    users: SUPER_ADMIN_EMAIL && SUPER_ADMIN_PASSWORD ? [
       {
         id: "admin-1",
         name: "System Admin",
@@ -89,7 +93,7 @@ function defaultData(): AppData {
         accessExpiryDate: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
         createdAt: now,
       },
-    ],
+    ] : [],
     accessRequests: [],
     posts: [],
     socialAccounts: [],
@@ -107,16 +111,7 @@ export function readStore(): AppData {
     const parsed = JSON.parse(file) as AppData;
     const normalized = {
       ...parsed,
-      users: (parsed.users ?? []).map((user) => {
-        const email = user.email.toLowerCase();
-        if (email === SUPER_ADMIN_EMAIL.toLowerCase() && !user.passwordHash.includes(":")) {
-          return { ...user, passwordHash: hashPassword(SUPER_ADMIN_PASSWORD) };
-        }
-        if (email === "customer@postflow.local" && !user.passwordHash.includes(":")) {
-          return { ...user, passwordHash: hashPassword("customer123") };
-        }
-        return user;
-      }),
+      users: (parsed.users ?? []).map((user) => ({ ...user })),
     };
 
     if (JSON.stringify(normalized) !== JSON.stringify(parsed)) {
@@ -201,61 +196,5 @@ export function getWorkspaceData(workspaceId: string) {
 }
 
 export function seedDemoData() {
-  const store = readStore();
-  if (store.users.length === 0) {
-    const now = new Date().toISOString();
-    store.users.push({
-      id: "admin-1",
-      name: "System Admin",
-      email: SUPER_ADMIN_EMAIL,
-      passwordHash: hashPassword(SUPER_ADMIN_PASSWORD),
-      role: "SYSTEM_ADMIN",
-      status: "APPROVED",
-      workspaceId: "workspace-admin",
-      accessStartDate: now,
-      accessExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: now,
-    });
-
-    store.users.push({
-      id: "customer-1",
-      name: "Demo Customer",
-      email: "customer@postflow.local",
-      passwordHash: hashPassword("customer123"),
-      role: "OWNER",
-      status: "APPROVED",
-      workspaceId: "workspace-1",
-      accessStartDate: now,
-      accessExpiryDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-      createdAt: now,
-    });
-
-    store.socialAccounts.push(
-      { id: "sa-1", workspaceId: "workspace-1", platform: "Facebook", accountName: "Demo Page", connected: true },
-      { id: "sa-2", workspaceId: "workspace-1", platform: "YouTube", accountName: "Demo Channel", connected: true },
-      { id: "sa-3", workspaceId: "workspace-1", platform: "X", accountName: "Demo X", connected: false },
-    );
-
-    store.posts.push({
-      id: "post-1",
-      workspaceId: "workspace-1",
-      title: "Campaign launch teaser",
-      description: "Product launch social campaign",
-      hashtags: "#launch #growth",
-      selectedPlatforms: ["Facebook", "YouTube", "X"],
-      status: "PUBLISHED",
-      createdAt: now,
-    });
-
-    store.logs.push({
-      id: "log-1",
-      workspaceId: "workspace-1",
-      userId: "customer-1",
-      event: "Login",
-      details: "Customer logged in successfully",
-      createdAt: now,
-    });
-  }
-  writeStore(store);
-  return store;
+  return readStore();
 }

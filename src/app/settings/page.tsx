@@ -1,17 +1,7 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
-import { readStore, seedDemoData } from "@/lib/store";
-import { verifySessionToken } from "@/lib/auth";
+import { requireCustomer } from "@/lib/access";
 
 export default async function SettingsPage() {
-  const cookieStore = await cookies();
-  const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
-  if (!session) redirect("/login");
-
-  seedDemoData();
-  const store = readStore();
-  const user = store.users.find((entry) => entry.id === session.id) ?? null;
-  if (!user || user.status !== "APPROVED") redirect("/waiting");
+  const user = await requireCustomer();
 
   return (
     <main className="app-shell">

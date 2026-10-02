@@ -1,17 +1,10 @@
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/access";
 import { approveAccessRequestAction, rejectAccessRequestAction } from "@/app/actions";
-import { readStore, seedDemoData } from "@/lib/store";
-import { verifySessionToken } from "@/lib/auth";
+import { readStore } from "@/lib/store";
 
 export default async function AdminRequestsPage() {
-  const cookieStore = await cookies();
-  const session = verifySessionToken(cookieStore.get("postflow_session")?.value);
-  if (!session) redirect("/login");
-  seedDemoData();
+  await requireAdmin();
   const store = readStore();
-  const user = store.users.find((entry) => entry.id === session.id);
-  if (!user || user.role !== "SYSTEM_ADMIN") redirect("/");
 
   return (
     <main className="app-shell">
@@ -34,8 +27,9 @@ export default async function AdminRequestsPage() {
               <li key={entry.id} className="request-item">
                 <div className="request-meta">
                   <strong>{entry.name}</strong>
+                  <span>@{entry.username}</span>
                   <span>{entry.email}</span>
-                  <span>{entry.paymentReference}</span>
+                  <span>{entry.inviteCodeVerified ? "Access code verified" : "Legacy request"}</span>
                   <span>{entry.status}</span>
                 </div>
                 <div className="request-actions">
