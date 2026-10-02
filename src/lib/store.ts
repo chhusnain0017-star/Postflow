@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { randomUUID } from "node:crypto";
 import { join } from "node:path";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, verifySuperAdminCredentials } from "@/lib/auth";
 
 export type UserRole = "SYSTEM_ADMIN" | "OWNER" | "MEMBER";
 export type AccessStatus = "PENDING" | "APPROVED" | "REJECTED" | "SUSPENDED" | "EXPIRED";
@@ -147,6 +148,42 @@ export function getUserByEmail(email: string) {
 
 export function getUserById(id: string) {
   return readStore().users.find((user) => user.id === id);
+}
+
+export function ensureConfiguredAdmin(email: string, password: string) {
+  if (!verifySuperAdminCredentials(email, password)) {
+    throw new Error("Admin credentials do not match the Railway Super Admin environment values.");
+  }
+
+  const store = readStore();
+  const normalizedEmail = process.env.SUPER_ADMIN_EMAIL!.trim().toLowerCase();
+  let user = store.users.find((entry) => entry.email.toLowerCase() === normalizedEmail);
+  if (user && user.role !== "SYSTEM_ADMIN") {
+    throw new Error("The configured Super Admin email is already assigned to a customer account.");
+  }
+
+  if (!user) {
+    const now = new Date().toISOString();
+    user = {
+      id: `admin-${randomUUID()}`,
+      name: "System Admin",
+      email: normalizedEmail,
+      passwordHash: hashPassword(password),
+      role: "SYSTEM_ADMIN",
+      status: "APPROVED",
+      workspaceId: "workspace-admin",
+      accessStartDate: now,
+      accessExpiryDate: new Date(Date.now() + 3650 * 24 * 60 * 60 * 1000).toISOString(),
+      createdAt: now,
+    };
+    store.users.push(user);
+  } else {
+    user.status = "APPROVED";
+    user.passwordHash = hashPassword(password);
+  }
+
+  writeStore(store);
+  return user;
 }
 
 export function createAccessRequest(data: Omit<AccessRequest, "id" | "createdAt">) {

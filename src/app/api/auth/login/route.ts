@@ -1,21 +1,33 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createSessionToken, verifyPassword } from "@/lib/auth";
-import { readStore, upsertUser } from "@/lib/store";
+import { ensureConfiguredAdmin, readStore, upsertUser } from "@/lib/store";
 
 export async function POST(request: Request) {
   const formData = await request.formData();
-  const identifier = String(formData.get("identifier") ?? formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const identifier = String(formData.get("identifier") ?? formData.get("email") ?? formData.get("superAdminEmail") ?? "").trim();
+  const password = String(formData.get("password") ?? formData.get("superAdminPassword") ?? "");
   const loginMode = String(formData.get("loginMode") ?? "customer");
 
   if (loginMode !== "admin" && loginMode !== "customer") {
     return NextResponse.json({ error: "Invalid login option" }, { status: 400 });
   }
-  const user = readStore().users.find((entry) => entry.email.toLowerCase() === identifier.toLowerCase()
-    || (loginMode === "customer" && entry.username?.toLowerCase() === identifier.toLowerCase()));
-  if (!user || !verifyPassword(password, user.passwordHash)) {
-    return NextResponse.json({ error: "Invalid email or password" }, { status: 401 });
+  let user;
+  try {
+    if (loginMode === "admin") {
+      user = ensureConfiguredAdmin(
+        String(formData.get("superAdminEmail") ?? identifier),
+        String(formData.get("superAdminPassword") ?? password),
+      );
+    } else {
+      user = readStore().users.find((entry) => entry.email.toLowerCase() === identifier.toLowerCase()
+        || entry.username?.toLowerCase() === identifier.toLowerCase());
+      if (!user || user.role === "SYSTEM_ADMIN" || !verifyPassword(password, user.passwordHash)) {
+        return NextResponse.json({ error: "Invalid username/email or password" }, { status: 401 });
+      }
+    }
+  } catch {
+    return NextResponse.json({ error: "Invalid admin credentials or Super Admin environment is not configured" }, { status: 401 });
   }
 
   if (user.status !== "APPROVED") {
@@ -26,10 +38,6 @@ export async function POST(request: Request) {
     if (!Number.isFinite(expiry) || Date.now() > expiry) {
       return NextResponse.json({ error: "Account access expired" }, { status: 403 });
     }
-  }
-
-  if ((loginMode === "admin") !== (user.role === "SYSTEM_ADMIN")) {
-    return NextResponse.json({ error: "Use the matching login option for this account" }, { status: 403 });
   }
 
   const sessionId = randomUUID();

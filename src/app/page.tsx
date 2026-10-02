@@ -18,13 +18,20 @@ export default function Home() {
           </div>
 
           <div className="network-arrows" aria-hidden="true">
-            <div className="arrow arrow-1" />
-            <div className="arrow arrow-2" />
-            <div className="arrow arrow-3" />
-            <div className="arrow arrow-4" />
-            <div className="arrow arrow-5" />
-            <div className="arrow arrow-6" />
-            <div className="arrow arrow-7" />
+            <svg viewBox="0 0 960 420" preserveAspectRatio="none">
+              <defs>
+                <marker id="platform-arrow" markerWidth="18" markerHeight="18" refX="15" refY="9" orient="auto" markerUnits="userSpaceOnUse">
+                  <path d="M 0 0 L 18 9 L 0 18 z" />
+                </marker>
+              </defs>
+              <line x1="254" y1="210" x2="632" y2="42" />
+              <line x1="254" y1="210" x2="712" y2="96" />
+              <line x1="254" y1="210" x2="792" y2="150" />
+              <line x1="254" y1="210" x2="828" y2="204" />
+              <line x1="254" y1="210" x2="792" y2="258" />
+              <line x1="254" y1="210" x2="712" y2="312" />
+              <line x1="254" y1="210" x2="632" y2="366" />
+            </svg>
           </div>
 
           <div className="platform-stack" aria-label="Social platforms">

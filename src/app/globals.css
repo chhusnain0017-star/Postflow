@@ -109,7 +109,8 @@ textarea {
 .hero-visual {
   position: relative;
   width: min(100%, 960px);
-  height: 420px;
+  height: auto;
+  aspect-ratio: 16 / 7;
   min-width: 0;
   margin: 18px auto 0;
   overflow: clip;
@@ -118,10 +119,10 @@ textarea {
 .video-card {
   position: absolute;
   z-index: 1;
-  left: 14px;
-  top: 86px;
-  width: 240px;
-  height: 250px;
+  left: 1.4583%;
+  top: 20.4762%;
+  width: 25%;
+  height: 59.5238%;
   background: #fff;
   border-radius: 16px;
   box-shadow: 0 14px 30px rgba(0, 0, 0, 0.1);
@@ -132,8 +133,8 @@ textarea {
 }
 
 .video-icon {
-  width: 104px;
-  height: 126px;
+  width: 43.3333%;
+  height: 50.4%;
   border-radius: 12px 12px 14px 14px;
   background: var(--primary);
   position: relative;
@@ -144,24 +145,24 @@ textarea {
   position: absolute;
   right: 0;
   top: 0;
-  border-top: 24px solid var(--bg-soft);
-  border-left: 24px solid rgba(255, 255, 255, 0.55);
+  border-top: 19% solid var(--bg-soft);
+  border-left: 23% solid rgba(255, 255, 255, 0.55);
 }
 
 .video-icon span {
   position: absolute;
-  left: 40px;
-  top: 43px;
-  border-left: 34px solid white;
-  border-top: 22px solid transparent;
-  border-bottom: 22px solid transparent;
+  left: 38.46%;
+  top: 34.13%;
+  border-left: 32.7% solid white;
+  border-top: 17.46% solid transparent;
+  border-bottom: 17.46% solid transparent;
 }
 
 .video-label {
   position: absolute;
-  bottom: 18px;
+  bottom: 7.2%;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: clamp(0.68rem, 1.8vw, 1.1rem);
   letter-spacing: 0;
 }
 
@@ -171,34 +172,17 @@ textarea {
   z-index: 0;
 }
 
-.arrow {
-  position: absolute;
-  left: 230px;
-  width: 410px;
-  height: 14px;
-  background: var(--primary);
-  border-radius: 10px;
-  transform-origin: left center;
+.network-arrows svg { width: 100%; height: 100%; overflow: visible; }
+
+.network-arrows line {
+  stroke: var(--primary);
+  stroke-width: 14;
+  stroke-linecap: round;
+  marker-end: url(#platform-arrow);
   filter: drop-shadow(0 5px 7px rgba(241, 89, 42, 0.13));
 }
 
-.arrow::before {
-  content: "";
-  position: absolute;
-  right: -18px;
-  top: -10px;
-  border-top: 17px solid transparent;
-  border-bottom: 17px solid transparent;
-  border-left: 24px solid var(--primary);
-}
-
-.arrow-1 { top: 160px; transform: rotate(-31deg); }
-.arrow-2 { top: 177px; transform: rotate(-20deg); }
-.arrow-3 { top: 194px; transform: rotate(-10deg); }
-.arrow-4 { top: 211px; transform: rotate(0deg); }
-.arrow-5 { top: 228px; transform: rotate(10deg); }
-.arrow-6 { top: 245px; transform: rotate(20deg); }
-.arrow-7 { top: 262px; transform: rotate(30deg); }
+.network-arrows marker path { fill: var(--primary); }
 
 .platform-stack {
   position: absolute;
@@ -208,8 +192,9 @@ textarea {
 
 .platform-pill {
   position: absolute;
-  width: 68px;
-  height: 68px;
+  width: 7.0833%;
+  aspect-ratio: 1;
+  height: auto;
   border-radius: 50%;
   display: grid;
   place-items: center;
@@ -217,16 +202,16 @@ textarea {
   background: white;
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.1);
   font-weight: 800;
-  font-size: 1.8rem;
+  font-size: clamp(1rem, 3vw, 1.8rem);
 }
 
-.facebook { color: #1877f2; top: 8px; right: 260px; font-family: Arial, sans-serif; }
-.instagram { color: #e8446c; top: 62px; right: 180px; }
-.tiktok { color: #111; top: 116px; right: 100px; }
-.threads { color: #111; top: 170px; right: 64px; }
-.youtube { color: #ff0033; top: 224px; right: 100px; }
-.pinterest { color: #d70010; top: 278px; right: 180px; font-family: Georgia, serif; }
-.x { color: #111; top: 332px; right: 260px; }
+.facebook { color: #1877f2; left: 65.8333%; top: 1.9048%; font-family: Arial, sans-serif; }
+.instagram { color: #e8446c; left: 74.1667%; top: 14.7619%; }
+.tiktok { color: #111; left: 82.5%; top: 27.619%; }
+.threads { color: #111; left: 86.25%; top: 40.4762%; }
+.youtube { color: #ff0033; left: 82.5%; top: 53.3333%; }
+.pinterest { color: #d70010; left: 74.1667%; top: 66.1905%; font-family: Georgia, serif; }
+.x { color: #111; left: 65.8333%; top: 79.0476%; }
 
 .form-notice {
   margin: 0;
@@ -277,25 +262,6 @@ textarea {
   color: white;
 }
 
-.auth-card h1 {
-  margin: 0 0 18px;
-  font-size: clamp(2rem, 4vw, 3rem);
-}
-
-.form-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.form-stack label {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.form-stack input,
 .form-stack textarea {
   width: 100%;
   border: 1px solid var(--border);
@@ -345,34 +311,6 @@ textarea {
 
 .auth-card {
   width: min(100%, 440px);
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  padding: 32px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.06);
-}
-
-.eyebrow {
-  margin: 0 0 12px;
-  font-size: 0.8rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.auth-card h1 {
-  margin: 0 0 18px;
-  font-size: clamp(2rem, 4vw, 3rem);
-}
-
-.form-stack {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.form-stack label {
-  display: flex;
   flex-direction: column;
   gap: 8px;
   font-weight: 600;
@@ -626,29 +564,24 @@ textarea {
   .hero-actions { gap: 8px; }
   .hero-actions .primary-btn,
   .hero-actions .secondary-btn { min-height: 42px; padding: 0 12px; font-size: 0.86rem; }
-  .hero-visual { height: 365px; margin-top: 10px; }
-  .video-card { left: 0; top: 104px; width: 150px; height: 190px; }
-  .video-icon { width: 80px; height: 100px; }
-  .video-icon span { left: 31px; top: 34px; border-left-width: 27px; border-top-width: 17px; border-bottom-width: 17px; }
-  .video-label { font-size: 0.82rem; }
-  .arrow { left: 140px; width: 170px; height: 9px; }
-  .arrow::before { right: -13px; top: -7px; border-top-width: 11px; border-bottom-width: 11px; border-left-width: 17px; }
-  .arrow-1 { top: 144px; }
-  .arrow-2 { top: 160px; }
-  .arrow-3 { top: 176px; }
-  .arrow-4 { top: 192px; }
-  .arrow-5 { top: 208px; }
-  .arrow-6 { top: 224px; }
-  .arrow-7 { top: 240px; }
-  .platform-pill { width: 48px; height: 48px; font-size: 1.25rem; }
-  .facebook { top: 16px; right: 150px; }
-  .instagram { top: 62px; right: 104px; }
-  .tiktok { top: 108px; right: 58px; }
-  .threads { top: 154px; right: 28px; }
-  .youtube { top: 200px; right: 58px; }
-  .pinterest { top: 246px; right: 104px; }
-  .x { top: 292px; right: 150px; }
+  .hero-visual { height: 180px; aspect-ratio: auto; margin-top: 10px; }
+  .video-card { left: 1.4583%; top: 14%; width: 44%; height: 72%; }
+  .platform-pill { width: 24px; height: 24px; font-size: 0.8rem; }
+  .facebook { top: 6px; }
+  .instagram { top: 29px; }
+  .tiktok { top: 52px; }
+  .threads { top: 75px; }
+  .youtube { top: 99px; }
+  .pinterest { top: 122px; }
+  .x { top: 145px; }
   .content-panel { padding: 28px 18px; }
   .request-item,
   .list-block li { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 360px) {
+  .hero-copy h1 { font-size: 1.5rem; }
+  .hero-actions { gap: 6px; }
+  .hero-actions .primary-btn,
+  .hero-actions .secondary-btn { padding: 0 9px; font-size: 0.78rem; }
 }

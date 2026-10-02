@@ -29,6 +29,22 @@ export function verifyInviteCode(code: string) {
   return timingSafeEqual(providedDigest, configuredDigest);
 }
 
+export function verifySuperAdminCredentials(email: string, password: string) {
+  const configuredEmail = process.env.SUPER_ADMIN_EMAIL?.trim().toLowerCase();
+  const configuredPassword = process.env.SUPER_ADMIN_PASSWORD;
+  if (!configuredEmail || !configuredPassword) return false;
+
+  const emailBuffer = Buffer.from(email.trim().toLowerCase());
+  const expectedEmailBuffer = Buffer.from(configuredEmail);
+  const passwordBuffer = Buffer.from(password);
+  const expectedPasswordBuffer = Buffer.from(configuredPassword);
+  const emailMatches = emailBuffer.length === expectedEmailBuffer.length
+    && timingSafeEqual(emailBuffer, expectedEmailBuffer);
+  const passwordMatches = passwordBuffer.length === expectedPasswordBuffer.length
+    && timingSafeEqual(passwordBuffer, expectedPasswordBuffer);
+  return emailMatches && passwordMatches;
+}
+
 export function createSessionToken(payload: Record<string, string>) {
   const secret = getAuthSecret();
   if (!secret) throw new Error("AUTH_SECRET must be configured before users can sign in.");

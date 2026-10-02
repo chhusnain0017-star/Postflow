@@ -2,22 +2,28 @@
 
 import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
-import { addAuditLog, createAccessRequest, createPost, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
+import { addAuditLog, createAccessRequest, createPost, ensureConfiguredAdmin, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
 import { createSessionToken, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { requireAdmin, requireCustomer, requireSignedInUser } from "@/lib/access";
 
 export async function loginAction(formData: FormData) {
-  const identifier = String(formData.get("identifier") ?? formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
+  const identifier = String(formData.get("identifier") ?? formData.get("email") ?? formData.get("superAdminEmail") ?? "").trim();
+  const password = String(formData.get("password") ?? formData.get("superAdminPassword") ?? "");
   const loginMode = String(formData.get("loginMode") ?? "customer");
-  const store = readStore();
   if (loginMode !== "admin" && loginMode !== "customer") throw new Error("Invalid login option.");
-  const user = store.users.find((entry) => entry.email.toLowerCase() === identifier.toLowerCase()
-    || (loginMode === "customer" && entry.username?.toLowerCase() === identifier.toLowerCase()));
-
-  if (!user || !verifyPassword(password, user.passwordHash)) {
-    throw new Error("Invalid email or password.");
+  let user;
+  if (loginMode === "admin") {
+    user = ensureConfiguredAdmin(
+      String(formData.get("superAdminEmail") ?? identifier),
+      String(formData.get("superAdminPassword") ?? password),
+    );
+  } else {
+    user = readStore().users.find((entry) => entry.email.toLowerCase() === identifier.toLowerCase()
+      || entry.username?.toLowerCase() === identifier.toLowerCase());
+    if (!user || user.role === "SYSTEM_ADMIN" || !verifyPassword(password, user.passwordHash)) {
+      throw new Error("Invalid username/email or password.");
+    }
   }
 
   if (user.status !== "APPROVED") {
@@ -26,10 +32,6 @@ export async function loginAction(formData: FormData) {
   if (user.accessExpiryDate) {
     const expiry = new Date(user.accessExpiryDate).getTime();
     if (!Number.isFinite(expiry) || Date.now() > expiry) throw new Error("This account's access has expired.");
-  }
-
-  if ((loginMode === "admin") !== (user.role === "SYSTEM_ADMIN")) {
-    throw new Error("Use the matching login option for this account.");
   }
 
   const sessionId = randomUUID();

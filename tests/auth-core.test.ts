@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { createAccessDecision, createTenantScope } from "../src/lib/security-core.ts";
-import { createSessionToken, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "../src/lib/auth.ts";
+import { createSessionToken, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken, verifySuperAdminCredentials } from "../src/lib/auth.ts";
 
 test("customer can access their own post and not another workspace post", () => {
   const customerA = createTenantScope({ id: "user-a", workspaceId: "workspace-a" });
@@ -60,5 +60,22 @@ test("session tokens reject tampering and work only with the configured secret",
   } finally {
     if (previousSecret === undefined) delete process.env.AUTH_SECRET;
     else process.env.AUTH_SECRET = previousSecret;
+  }
+});
+
+test("admin sign-in only accepts the configured Super Admin values", () => {
+  const previousEmail = process.env.SUPER_ADMIN_EMAIL;
+  const previousPassword = process.env.SUPER_ADMIN_PASSWORD;
+  process.env.SUPER_ADMIN_EMAIL = "owner@example.com";
+  process.env.SUPER_ADMIN_PASSWORD = "private-admin-password";
+  try {
+    assert.equal(verifySuperAdminCredentials("OWNER@example.com", "private-admin-password"), true);
+    assert.equal(verifySuperAdminCredentials("admin@postflow.local", "admin123"), false);
+    assert.equal(verifySuperAdminCredentials("owner@example.com", "wrong-password"), false);
+  } finally {
+    if (previousEmail === undefined) delete process.env.SUPER_ADMIN_EMAIL;
+    else process.env.SUPER_ADMIN_EMAIL = previousEmail;
+    if (previousPassword === undefined) delete process.env.SUPER_ADMIN_PASSWORD;
+    else process.env.SUPER_ADMIN_PASSWORD = previousPassword;
   }
 });

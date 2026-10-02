@@ -21,16 +21,28 @@ export default function LoginPage({ adminOnly = false }: { adminOnly?: boolean }
           </button>
         </div>}
 
-        <form action={loginAction} className="form-stack">
+        <form action={loginAction} className="form-stack" autoComplete="off">
           <input type="hidden" name="loginMode" value={isAdminMode ? "admin" : "customer"} />
           <label>
             <span>{isAdminMode ? "Admin email" : "Username or email"}</span>
-            <input name="identifier" type={isAdminMode ? "email" : "text"} autoComplete="username" placeholder={isAdminMode ? "admin@yourdomain.com" : "Your username or email"} required />
+            <input
+              name={isAdminMode ? "superAdminEmail" : "identifier"}
+              type={isAdminMode ? "email" : "text"}
+              autoComplete={isAdminMode ? "off" : "username"}
+              placeholder={isAdminMode ? "Enter Super Admin email" : "Your username or email"}
+              required
+            />
           </label>
 
           <label>
             <span>Password</span>
-            <input name="password" type="password" placeholder={isAdminMode ? "Enter admin password" : "Enter your password"} required />
+            <input
+              name={isAdminMode ? "superAdminPassword" : "password"}
+              type="password"
+              autoComplete={isAdminMode ? "new-password" : "current-password"}
+              placeholder={isAdminMode ? "Enter the password set in Railway" : "Enter your password"}
+              required
+            />
           </label>
 
           <button type="submit" className="primary-btn">{isAdminMode ? "Admin login" : "Login"}</button>
