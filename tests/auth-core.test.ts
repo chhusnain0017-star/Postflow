@@ -126,6 +126,21 @@ test("production redirects use the configured custom domain", () => {
   }
 });
 
+test("production redirects prefer Railway custom domains when APP_URL is unset", () => {
+  const previousAppUrl = process.env.APP_URL;
+  const previousRailway = process.env.RAILWAY_PUBLIC_DOMAIN;
+  delete process.env.APP_URL;
+  process.env.RAILWAY_PUBLIC_DOMAIN = "postflow.taskflow.monster";
+  try {
+    assert.equal(getAppRedirectUrl("/api/integrations/callback", "http://localhost:3000/test", "production").toString(), "https://postflow.taskflow.monster/api/integrations/callback");
+  } finally {
+    if (previousAppUrl === undefined) delete process.env.APP_URL;
+    else process.env.APP_URL = previousAppUrl;
+    if (previousRailway === undefined) delete process.env.RAILWAY_PUBLIC_DOMAIN;
+    else process.env.RAILWAY_PUBLIC_DOMAIN = previousRailway;
+  }
+});
+
 test("scheduled local times convert to the correct UTC instant across DST", () => {
   assert.equal(localDateTimeToUtc("2026-01-15T12:00", "America/New_York"), "2026-01-15T17:00:00.000Z");
   assert.equal(localDateTimeToUtc("2026-07-15T12:00", "America/New_York"), "2026-07-15T16:00:00.000Z");
