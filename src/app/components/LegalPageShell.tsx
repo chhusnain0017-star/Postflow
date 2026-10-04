@@ -10,7 +10,7 @@ export default function LegalPageShell({ title, children }: { title: string; chi
         <Link href="/" className="text-link">Home</Link>
       </header>
       <article className="legal-document">
-        <p className="eyebrow">PostFlow · Effective October 2, 2026</p>
+        <p className="eyebrow">PostFlow · Effective October 4, 2026</p>
         <h1>{title}</h1>
         {children}
       </article>
