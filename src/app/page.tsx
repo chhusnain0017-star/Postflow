@@ -1,6 +1,6 @@
-import LegalLinks from "@/app/components/LegalLinks";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import LegalLinks from "@/app/components/LegalLinks";
 
 export default function Home() {
   return (
@@ -9,12 +9,12 @@ export default function Home() {
         <div className="hero-copy">
           <Image src="/postflow-logo.png" alt="PostFlow logo" width={120} height={120} className="home-logo" priority />
           <h1>PostFlow<br />Upload once. Posts everywhere.</h1>
+          <p className="home-intro">PostFlow, by TaskFlow.monster, is a workspace for teams to plan social content, organize media, review posts, and manage supported social-account connections.</p>
           <div className="hero-actions">
             <a href="/login" className="primary-btn">Login</a>
             <a href="/request-access" className="secondary-btn">Request access</a>
             <a href="/admin-login" className="secondary-btn admin-action">Admin login</a>
           </div>
-          <p className="privacy-home-link">Privacy information is always available in our <Link href="/privacy">Privacy Policy</Link>, including how we handle Google account data.</p>
         </div>
 
         <div className="hero-visual" role="img" aria-label="A video file distributing to Facebook, Instagram, TikTok, Threads, YouTube, Pinterest, and X">
@@ -51,6 +51,22 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      <section className="home-details" aria-label="About PostFlow and connected account data">
+        <article className="home-detail-card">
+          <h2>What you can do with PostFlow</h2>
+          <p>Create and organize social-post drafts, upload and manage media, set publishing schedules, route posts for team review, manage workspace members and roles, and view or export available post-performance reports.</p>
+          <p>Connect supported social accounts to authorize platform-specific features. Publishing availability depends on each platform’s permissions and setup; a saved or scheduled post is not confirmation that a platform has published it.</p>
+        </article>
+
+        <article className="home-detail-card">
+          <h2>Why PostFlow requests Google access</h2>
+          <p>If you choose to connect YouTube, Google authorization currently requests your basic account identity (OpenID, profile, and email) and YouTube upload permission. PostFlow uses the identity to identify the account you selected and stores the authorization tokens, encrypted, to maintain that connection and support YouTube upload features you choose to use.</p>
+          <p>PostFlow does not request Google Analytics access. Saving a draft does not send it to Google; content is sent to YouTube only when you request a supported and configured YouTube publishing action.</p>
+          <p className="privacy-home-link">Read the <Link href="/privacy">PostFlow Privacy Policy</Link> for full details about information access, use, storage, sharing, and deletion. This public page and policy are available without signing in.</p>
+        </article>
+      </section>
+
       <p className="powered-by">Powered by <a href="https://taskflow.monster" target="_blank" rel="noreferrer">taskflow.monster</a></p>
       <LegalLinks />
     </main>

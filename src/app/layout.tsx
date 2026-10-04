@@ -13,13 +13,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PostFlow | Multi-publisher SaaS",
-  description: "Upload once and publish across social channels through approved customer accounts.",
+  title: "PostFlow | Social content planning and publishing workspace",
+  description: "PostFlow helps teams plan social content, manage media and reviews, schedule posts, and connect supported social accounts.",
   metadataBase: new URL("https://postflow.taskflow.monster"),
   alternates: { canonical: "/" },
   openGraph: {
-    title: "PostFlow | Multi-publisher SaaS",
-    description: "Plan and manage social publishing across approved customer accounts.",
+    title: "PostFlow | Social content planning and publishing workspace",
+    description: "Plan social content, manage media and reviews, schedule posts, and connect supported social accounts with PostFlow.",
     url: "https://postflow.taskflow.monster",
     siteName: "PostFlow",
     type: "website",
