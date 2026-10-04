@@ -16,7 +16,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
       <CustomerNav active="integrations" role={user.role} />
       <section className="content-panel">
         <h1>Social integrations</h1>
-        <p className="form-notice">Save each platform app credential once. This does not connect a social account: provider authorization must also be completed before status changes to Connected. Saved credentials are encrypted and cannot be replaced for this PostFlow ID.</p>
+        <p className="form-notice">Save each platform app credential once. This does not connect a social account: provider authorization must also be completed before status changes to Connected. Customers cannot replace saved credentials themselves; an administrator can remove them from Customer management.</p>
         {connection === "connected" && <p className="integration-feedback success" role="status">Account authorization completed successfully.</p>}
         {connection === "failed" && <p className="integration-feedback error" role="alert">Authorization could not be verified. Check the app settings, callback URL, and requested permissions, then try again.</p>}
         {connection === "denied" && <p className="integration-feedback" role="status">Authorization was cancelled. Your account remains disconnected.</p>}

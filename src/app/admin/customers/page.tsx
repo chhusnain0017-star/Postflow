@@ -1,9 +1,15 @@
 import { requireAdmin } from "@/lib/access";
 import { readStore } from "@/lib/store";
 import { renewCustomerContractAction } from "@/app/actions";
+import AdminIntegrationRemovalForm from "@/app/admin/customers/AdminIntegrationRemovalForm";
 
-export default async function AdminCustomersPage() {
+export default async function AdminCustomersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ integration?: string }>;
+}) {
   await requireAdmin();
+  const { integration } = await searchParams;
   const store = readStore();
 
   return (
@@ -19,6 +25,7 @@ export default async function AdminCustomersPage() {
       </aside>
       <section className="content-panel">
         <h1>Customer management</h1>
+        {integration === "removed" && <p className="integration-feedback success" role="status">Saved credentials and stored connection tokens were removed. The customer can now configure the platform again.</p>}
         <ul className="list-block">
           {store.users.map((entry) => {
             const expired = entry.role !== "SYSTEM_ADMIN" && (entry.status === "EXPIRED"
@@ -34,6 +41,35 @@ export default async function AdminCustomersPage() {
             );
           })}
         </ul>
+        <section className="card-block">
+          <h2>Customer platform credentials</h2>
+          <p className="form-hint">Remove a customer’s saved platform credentials and locally stored connection tokens to let them set the platform up again. This does not revoke access with the platform provider. Secrets are never displayed here.</p>
+          {store.socialAccounts.length === 0 ? (
+            <p className="empty-state">No customer platform credentials are configured.</p>
+          ) : (
+            <ul className="list-block">
+              {store.socialAccounts.map((account) => {
+                const workspaceUsers = store.users.filter((entry) => entry.workspaceId === account.workspaceId
+                  && entry.role !== "SYSTEM_ADMIN");
+                const customer = workspaceUsers.find((entry) => entry.role === "OWNER")
+                  ?? workspaceUsers.find((entry) => entry.role === "ADMIN")
+                  ?? workspaceUsers[0];
+                return (
+                  <li key={account.id}>
+                    <strong>{account.platform} · {customer?.name ?? "Unknown customer"}</strong>
+                    <span>{customer?.email ?? "Customer account not found"}</span>
+                    <span>{account.connected ? "Connected" : account.credentialsEncrypted ? "Credentials saved; not connected" : "Not connected"}</span>
+                    {customer && <AdminIntegrationRemovalForm
+                      accountId={account.id}
+                      platform={account.platform}
+                      customerEmail={customer.email}
+                    />}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       </section>
     </main>
   );

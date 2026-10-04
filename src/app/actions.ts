@@ -649,3 +649,30 @@ export async function renewCustomerContractAction(formData: FormData) {
   revalidatePath("/admin/customers");
   redirect("/admin/customers");
 }
+
+export async function removeCustomerIntegrationCredentialsAction(formData: FormData) {
+  const administrator = await requireAdmin();
+  const accountId = String(formData.get("accountId") ?? "").trim();
+  if (!accountId) throw new Error("Choose a customer integration to remove.");
+
+  const store = readStore();
+  const account = store.socialAccounts.find((entry) => entry.id === accountId);
+  if (!account) throw new Error("Customer integration not found.");
+
+  const customer = store.users.find((entry) => entry.workspaceId === account.workspaceId
+    && entry.role !== "SYSTEM_ADMIN");
+  if (!customer) throw new Error("Customer workspace not found.");
+
+  store.socialAccounts = store.socialAccounts.filter((entry) => entry.id !== account.id);
+  store.oauthStates = store.oauthStates.filter((entry) => entry.accountId !== account.id);
+  writeStore(store);
+  addAuditLog({
+    workspaceId: account.workspaceId,
+    userId: administrator.id,
+    event: "Customer Integration Removed",
+    details: `${account.platform} credentials and stored tokens removed for ${customer.email}`,
+  });
+  revalidatePath("/admin/customers");
+  revalidatePath("/integrations");
+  redirect("/admin/customers?integration=removed");
+}

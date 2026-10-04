@@ -19,7 +19,7 @@ export default function TermsPage() {
       <p>PostFlow does not currently process payments or automatically charge for renewal. Contact the administrator to arrange payment. An administrator may renew access after confirming payment; the next one-year term then begins on the renewal date.</p>
 
       <h2>3. Social accounts and integrations</h2>
-      <p>You authorize providers through their own authorization screens and are responsible for selecting the correct accounts, business assets, permissions, and publishing destinations. A platform connection is tied to this PostFlow account and cannot be replaced through the app; a different account may require a new PostFlow account. You may also need to revoke access directly with the platform.</p>
+      <p>You authorize providers through their own authorization screens and are responsible for selecting the correct accounts, business assets, permissions, and publishing destinations. Customers cannot replace saved platform credentials themselves. An administrator may remove the saved credentials and locally stored tokens so the integration can be configured again; this does not revoke access with the provider, which may need to be revoked separately.</p>
       <p>Entering a Client ID and Client Secret only saves app configuration; it does not itself connect a social account. Provider approval, valid callback configuration, consent, and any platform-specific setup are required. Third-party platforms control their APIs, scopes, review, availability, limits, and terms.</p>
 
       <h2>4. Content, scheduling, and publishing</h2>
