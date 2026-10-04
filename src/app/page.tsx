@@ -7,7 +7,7 @@ export default function Home() {
     <main className="landing-shell">
       <section className="hero">
         <div className="hero-copy">
-          <Image src="/postflow-logo.png" alt="PostFlow logo" width={120} height={120} className="home-logo" priority />
+          <Image src="/postflow-logo-green.png" alt="PostFlow logo" width={120} height={120} className="home-logo" priority />
           <h1>PostFlow<br />Upload once. Posts everywhere.</h1>
           <p className="home-intro">PostFlow, by TaskFlow.monster, is a workspace for teams to plan social content, organize media, review posts, and manage supported social-account connections.</p>
           <div className="hero-actions">
