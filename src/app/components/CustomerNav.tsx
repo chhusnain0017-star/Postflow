@@ -19,6 +19,11 @@ export default function CustomerNav({ active, role }: { active: string; role: Us
   return (
     <aside className="side-nav">
       <div className="brand">PostFlow</div>
+      <aside className="privacy-update" aria-label="Privacy update">
+        <strong>Privacy update · October 4, 2026</strong>
+        <p>We clarified how Google account information and YouTube access are used. We will post an in-app notice here if our use of Google user data changes.</p>
+        <Link href="/privacy">Review the Privacy Policy</Link>
+      </aside>
       <nav>
         {customerLinks.slice(0, 3).map((link) => (
           <Link key={link.href} href={link.href} className={active === link.active ? "active" : undefined}>{link.label}</Link>
@@ -27,6 +32,7 @@ export default function CustomerNav({ active, role }: { active: string; role: Us
         {customerLinks.slice(3).map((link) => (
           <Link key={link.href} href={link.href} className={active === link.active ? "active" : undefined}>{link.label}</Link>
         ))}
+        <Link href="/privacy">Privacy Policy</Link>
       </nav>
       <form action="/api/auth/logout" method="POST" className="logout-form">
         <button type="submit">Logout</button>

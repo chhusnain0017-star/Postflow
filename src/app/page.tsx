@@ -1,4 +1,5 @@
 import LegalLinks from "@/app/components/LegalLinks";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -11,6 +12,7 @@ export default function Home() {
             <a href="/request-access" className="secondary-btn">Request access</a>
             <a href="/admin-login" className="secondary-btn admin-action">Admin login</a>
           </div>
+          <p className="privacy-home-link">Privacy information is always available in our <Link href="/privacy">Privacy Policy</Link>, including how we handle Google account data.</p>
         </div>
 
         <div className="hero-visual" role="img" aria-label="A video file distributing to Facebook, Instagram, TikTok, Threads, YouTube, Pinterest, and X">
