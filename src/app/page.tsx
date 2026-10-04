@@ -6,7 +6,7 @@ export default function Home() {
     <main className="landing-shell">
       <section className="hero">
         <div className="hero-copy">
-          <h1>Upload once.<br />Posts everywhere.</h1>
+          <h1>PostFlow<br />Upload once. Posts everywhere.</h1>
           <div className="hero-actions">
             <a href="/login" className="primary-btn">Login</a>
             <a href="/request-access" className="secondary-btn">Request access</a>
