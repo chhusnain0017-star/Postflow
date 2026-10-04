@@ -1,11 +1,13 @@
 import LegalLinks from "@/app/components/LegalLinks";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Home() {
   return (
     <main className="landing-shell">
       <section className="hero">
         <div className="hero-copy">
+          <Image src="/postflow-logo.png" alt="PostFlow logo" width={120} height={120} className="home-logo" priority />
           <h1>PostFlow<br />Upload once. Posts everywhere.</h1>
           <div className="hero-actions">
             <a href="/login" className="primary-btn">Login</a>
