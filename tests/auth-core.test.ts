@@ -184,4 +184,6 @@ test("OAuth tokens are encrypted and provider authorization parameters are platf
   assert.equal(xUrl.searchParams.get("state"), "random-state");
   const tiktokUrl = createAuthorizationUrl("TikTok", "tt-client", "https://postflow.example/callback", "state");
   assert.match(tiktokUrl.searchParams.get("scope") ?? "", /user\.info\.basic,video\.publish/);
+  const facebookUrl = createAuthorizationUrl("Facebook", "fb-client", "https://postflow.example/callback", "state");
+  assert.equal(facebookUrl.searchParams.get("scope"), "public_profile");
 });

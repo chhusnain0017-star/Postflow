@@ -16,7 +16,7 @@ const configurations: Partial<Record<SocialPlatform, OAuthProviderConfig>> = {
     tokenUrl: "https://graph.facebook.com/v25.0/oauth/access_token",
     profileUrl: "https://graph.facebook.com/v25.0/me?fields=id,name",
     clientIdParameter: "client_id",
-    scopes: ["public_profile", "pages_show_list", "pages_read_engagement", "pages_manage_posts"],
+    scopes: ["public_profile"],
     pkce: false,
     tokenMethod: "GET",
   },
