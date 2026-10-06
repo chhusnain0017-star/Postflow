@@ -16,6 +16,8 @@ bun dev
 
 For local development, open [http://localhost:3000](http://localhost:3000). Production: [https://postflow.taskflow.monster](https://postflow.taskflow.monster).
 
+The public account-deletion request page is [https://postflow.taskflow.monster/delete-account](https://postflow.taskflow.monster/delete-account). Requests are verified and processed by an administrator; there is currently no instant, self-service deletion control.
+
 ## Provider setup and account terms
 
 Set `APP_URL=https://postflow.taskflow.monster` in Railway. Register this exact redirect URI with each standard OAuth provider:

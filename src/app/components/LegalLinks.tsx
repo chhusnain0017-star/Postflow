@@ -5,6 +5,7 @@ export default function LegalLinks() {
     <nav className="legal-links" aria-label="Legal">
       <Link href="/terms">Terms of Service</Link>
       <Link href="/privacy">Privacy Policy</Link>
+      <Link href="/delete-account">Delete Account</Link>
     </nav>
   );
 }
