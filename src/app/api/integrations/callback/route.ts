@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { decryptOAuthTokens, decryptProviderCredentials, encryptOAuthTokens } from "@/lib/auth";
-import { getOAuthProviderConfig } from "@/lib/oauth";
+import { getOAuthAppCredentials, getOAuthProviderConfig } from "@/lib/oauth";
 import type { SocialPlatform } from "@/lib/platforms";
 import { getAppRedirectUrl } from "@/lib/redirect-url";
 import { addAuditLog, readStore, writeStore } from "@/lib/store";
@@ -136,7 +136,8 @@ export async function GET(request: Request) {
 
     const account = store.socialAccounts.find((entry) => entry.id === oauthState.accountId
       && entry.workspaceId === oauthState.workspaceId && entry.platform === oauthState.platform);
-    const config = account?.credentialsEncrypted ? decryptProviderCredentials(account.credentialsEncrypted) : null;
+    const config = getOAuthAppCredentials(oauthState.platform as SocialPlatform)
+      ?? (account?.credentialsEncrypted ? decryptProviderCredentials(account.credentialsEncrypted) : null);
     if (!account || !config || account.connected) throw new Error("The integration configuration changed.");
 
     const codeVerifier = oauthState.codeVerifierEncrypted

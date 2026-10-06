@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/access";
 import { decryptProviderCredentials, encryptOAuthTokens } from "@/lib/auth";
-import { createAuthorizationUrl, getOAuthProviderConfig, getSocialPlatform } from "@/lib/oauth";
+import { createAuthorizationUrl, getOAuthAppCredentials, getOAuthProviderConfig, getSocialPlatform } from "@/lib/oauth";
 import { getAppRedirectUrl } from "@/lib/redirect-url";
 import { readStore, writeStore } from "@/lib/store";
 
@@ -16,18 +16,32 @@ export async function GET(request: Request, { params }: { params: Promise<{ plat
   if (platform === "WhatsApp") return NextResponse.redirect(new URL("/integrations/whatsapp", request.url));
 
   const store = readStore();
-  const account = store.socialAccounts.find((entry) => entry.workspaceId === user.workspaceId && entry.platform === platform);
+  let account = store.socialAccounts.find((entry) => entry.workspaceId === user.workspaceId && entry.platform === platform);
   const provider = getOAuthProviderConfig(platform);
-  if (!account?.credentialsEncrypted || !provider) return NextResponse.json({ error: "Save platform credentials before authorizing." }, { status: 409 });
-  if (account.connected) return NextResponse.redirect(getAppRedirectUrl("/integrations?connection=already-connected", request.url));
+  if (!provider) return NextResponse.json({ error: "This platform does not support this authorization flow." }, { status: 409 });
+  const credentials = getOAuthAppCredentials(platform)
+    ?? (account?.credentialsEncrypted ? decryptProviderCredentials(account.credentialsEncrypted) : null);
+  if (!credentials) return NextResponse.json({ error: "This platform's app credentials have not been configured by the administrator." }, { status: 503 });
+  if (account?.connected) return NextResponse.redirect(getAppRedirectUrl("/integrations?connection=already-connected", request.url));
 
-  const { clientId } = decryptProviderCredentials(account.credentialsEncrypted);
+  if (!account) {
+    account = {
+      id: `social-${randomUUID()}`,
+      workspaceId: user.workspaceId,
+      platform,
+      accountName: `${platform} account`,
+      connected: false,
+      configured: true,
+    };
+    store.socialAccounts.push(account);
+  }
+
   const state = randomBytes(32).toString("base64url");
   const stateHash = createHash("sha256").update(state).digest("hex");
   const codeVerifier = provider.pkce ? randomBytes(48).toString("base64url") : undefined;
   const codeChallenge = codeVerifier ? createHash("sha256").update(codeVerifier).digest("base64url") : undefined;
   const redirectUri = getAppRedirectUrl("/api/integrations/callback", request.url).toString();
-  const authorizationUrl = createAuthorizationUrl(platform, clientId, redirectUri, state, codeChallenge);
+  const authorizationUrl = createAuthorizationUrl(platform, credentials.clientId, redirectUri, state, codeChallenge);
 
   store.oauthStates = store.oauthStates.filter((entry) => Date.parse(entry.expiresAt) > Date.now());
   store.oauthStates.push({

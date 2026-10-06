@@ -5,9 +5,10 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { addAuditLog, createAccessRequest, createPost, ensureConfiguredAdmin, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
-import { createSessionToken, decryptProviderCredentials, encryptOAuthTokens, encryptProviderCredentials, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
+import { createSessionToken, decryptProviderCredentials, encryptOAuthTokens, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { requireAdmin, requireCustomer, requirePostApprover, requireSignedInUser, requireTeamManager } from "@/lib/access";
+import { getOAuthAppCredentials } from "@/lib/oauth";
 import { isSocialPlatform } from "@/lib/platforms";
 import { localDateTimeToUtc } from "@/lib/time-zone";
 import { addOneYear } from "@/lib/billing";
@@ -509,40 +510,6 @@ export async function suspendTeamMemberAction(formData: FormData) {
   redirect("/team");
 }
 
-export async function saveIntegrationConfiguration(formData: FormData) {
-  const user = await requireCustomer();
-  const platformName = String(formData.get("platform") ?? "");
-  const clientId = String(formData.get("clientId") ?? "").trim();
-  const clientSecret = String(formData.get("clientSecret") ?? "");
-  if (!isSocialPlatform(platformName)) throw new Error("Choose a supported social platform.");
-  if (!clientId || clientId.length > 512 || !clientSecret.trim() || clientSecret.length > 4096) {
-    throw new Error("Enter a valid Client ID and Client Secret.");
-  }
-
-  const store = readStore();
-  const existing = store.socialAccounts.find((account) => account.workspaceId === user.workspaceId
-    && account.platform === platformName);
-  if (existing) throw new Error("This platform is already configured for this account and cannot be replaced.");
-
-  store.socialAccounts.push({
-    id: `social-${randomUUID()}`,
-    workspaceId: user.workspaceId,
-    platform: platformName,
-    accountName: `${platformName} app credentials`,
-    connected: false,
-    configured: true,
-    credentialsEncrypted: encryptProviderCredentials(clientId, clientSecret),
-  });
-  writeStore(store);
-  addAuditLog({
-    workspaceId: user.workspaceId,
-    userId: user.id,
-    event: "Integration Credentials Saved",
-    details: `${platformName} app credentials saved; account authorization is still required`,
-  });
-  redirect("/integrations");
-}
-
 export async function completeWhatsAppSignupAction(
   _previousState: { error?: string } | null,
   formData: FormData,
@@ -558,16 +525,26 @@ export async function completeWhatsAppSignupAction(
   }
 
   const store = readStore();
-  const account = store.socialAccounts.find((entry) => entry.workspaceId === user.workspaceId && entry.platform === "WhatsApp");
-  if (!account?.credentialsEncrypted || account.connected) return { error: "Save WhatsApp credentials first; connected accounts cannot be replaced." };
+  const existingAccount = store.socialAccounts.find((entry) => entry.workspaceId === user.workspaceId && entry.platform === "WhatsApp");
+  if (existingAccount?.connected) return { error: "WhatsApp is already connected. Contact the administrator to change the connected account." };
+  const credentials = getOAuthAppCredentials("WhatsApp")
+    ?? (existingAccount?.credentialsEncrypted ? decryptProviderCredentials(existingAccount.credentialsEncrypted) : null);
+  if (!credentials) return { error: "WhatsApp app credentials are not configured by the platform administrator." };
+  const account = existingAccount ?? {
+    id: `social-${randomUUID()}`,
+    workspaceId: user.workspaceId,
+    platform: "WhatsApp",
+    accountName: "WhatsApp Business",
+    connected: false,
+    configured: true,
+  };
 
   let connectedAccountName: string;
   try {
-    const { clientId, clientSecret } = decryptProviderCredentials(account.credentialsEncrypted);
     const graphVersion = process.env.META_GRAPH_API_VERSION ?? "v25.0";
     const exchangeUrl = new URL(`https://graph.facebook.com/${graphVersion}/oauth/access_token`);
-    exchangeUrl.searchParams.set("client_id", clientId);
-    exchangeUrl.searchParams.set("client_secret", clientSecret);
+    exchangeUrl.searchParams.set("client_id", credentials.clientId);
+    exchangeUrl.searchParams.set("client_secret", credentials.clientSecret);
     exchangeUrl.searchParams.set("code", authorizationCode);
     const exchangeResponse = await fetch(exchangeUrl, { signal: AbortSignal.timeout(20000) });
     const tokenPayload = await exchangeResponse.json() as { access_token?: string; expires_in?: number; error?: { message?: string } };
@@ -609,6 +586,7 @@ export async function completeWhatsAppSignupAction(
       ? new Date(Date.now() + tokenPayload.expires_in * 1000).toISOString()
       : undefined;
     account.grantedScopes = ["whatsapp_business_management", "whatsapp_business_messaging"];
+    if (!existingAccount) store.socialAccounts.push(account);
     writeStore(store);
     connectedAccountName = account.accountName;
   } catch {

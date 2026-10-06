@@ -10,6 +10,22 @@ export type OAuthProviderConfig = {
   tokenMethod: "GET" | "POST";
 };
 
+export type OAuthAppCredentials = {
+  clientId: string;
+  clientSecret: string;
+};
+
+const credentialEnvironmentNames: Record<SocialPlatform, { clientId: string; clientSecret: string }> = {
+  Facebook: { clientId: "META_CLIENT_ID", clientSecret: "META_CLIENT_SECRET" },
+  Instagram: { clientId: "META_CLIENT_ID", clientSecret: "META_CLIENT_SECRET" },
+  WhatsApp: { clientId: "META_CLIENT_ID", clientSecret: "META_CLIENT_SECRET" },
+  YouTube: { clientId: "GOOGLE_CLIENT_ID", clientSecret: "GOOGLE_CLIENT_SECRET" },
+  TikTok: { clientId: "TIKTOK_CLIENT_KEY", clientSecret: "TIKTOK_CLIENT_SECRET" },
+  X: { clientId: "X_CLIENT_ID", clientSecret: "X_CLIENT_SECRET" },
+  Pinterest: { clientId: "PINTEREST_CLIENT_ID", clientSecret: "PINTEREST_CLIENT_SECRET" },
+  Threads: { clientId: "THREADS_CLIENT_ID", clientSecret: "THREADS_CLIENT_SECRET" },
+};
+
 const configurations: Partial<Record<SocialPlatform, OAuthProviderConfig>> = {
   Facebook: {
     authorizationUrl: "https://www.facebook.com/v25.0/dialog/oauth",
@@ -82,6 +98,13 @@ export function getSocialPlatform(value: string): SocialPlatform | null {
 
 export function getOAuthProviderConfig(platform: SocialPlatform) {
   return configurations[platform] ?? null;
+}
+
+export function getOAuthAppCredentials(platform: SocialPlatform): OAuthAppCredentials | null {
+  const names = credentialEnvironmentNames[platform];
+  const clientId = process.env[names.clientId]?.trim();
+  const clientSecret = process.env[names.clientSecret];
+  return clientId && clientSecret?.trim() ? { clientId, clientSecret } : null;
 }
 
 export function createAuthorizationUrl(

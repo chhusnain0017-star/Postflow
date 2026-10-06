@@ -7,7 +7,7 @@ import { getAppRedirectUrl } from "../src/lib/redirect-url.ts";
 import { localDateTimeToUtc } from "../src/lib/time-zone.ts";
 import { groupMetricRecords, latestMetricSnapshots, sumMetricRecords } from "../src/lib/analytics.ts";
 import { addOneYear } from "../src/lib/billing.ts";
-import { createAuthorizationUrl } from "../src/lib/oauth.ts";
+import { createAuthorizationUrl, getOAuthAppCredentials } from "../src/lib/oauth.ts";
 
 test("customer can access their own post and not another workspace post", () => {
   const customerA = createTenantScope({ id: "user-a", workspaceId: "workspace-a" });
@@ -186,4 +186,22 @@ test("OAuth tokens are encrypted and provider authorization parameters are platf
   assert.match(tiktokUrl.searchParams.get("scope") ?? "", /user\.info\.basic,video\.publish/);
   const facebookUrl = createAuthorizationUrl("Facebook", "fb-client", "https://postflow.example/callback", "state");
   assert.equal(facebookUrl.searchParams.get("scope"), "public_profile");
+});
+
+test("Meta OAuth app credentials are shared by Facebook and Instagram and require both values", () => {
+  const previousClientId = process.env.META_CLIENT_ID;
+  const previousClientSecret = process.env.META_CLIENT_SECRET;
+  process.env.META_CLIENT_ID = "meta-app-id";
+  process.env.META_CLIENT_SECRET = "meta-app-secret";
+  try {
+    assert.deepEqual(getOAuthAppCredentials("Facebook"), { clientId: "meta-app-id", clientSecret: "meta-app-secret" });
+    assert.deepEqual(getOAuthAppCredentials("Instagram"), { clientId: "meta-app-id", clientSecret: "meta-app-secret" });
+    delete process.env.META_CLIENT_SECRET;
+    assert.equal(getOAuthAppCredentials("Facebook"), null);
+  } finally {
+    if (previousClientId === undefined) delete process.env.META_CLIENT_ID;
+    else process.env.META_CLIENT_ID = previousClientId;
+    if (previousClientSecret === undefined) delete process.env.META_CLIENT_SECRET;
+    else process.env.META_CLIENT_SECRET = previousClientSecret;
+  }
 });

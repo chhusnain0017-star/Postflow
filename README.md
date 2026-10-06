@@ -26,7 +26,18 @@ Set `APP_URL=https://postflow.taskflow.monster` in Railway. Register this exact 
 https://postflow.taskflow.monster/api/integrations/callback
 ```
 
-Configure each provider app's approved scopes and redirect URI before customers authorize it. Saved Client IDs and secrets and returned OAuth tokens are encrypted with `ENCRYPTION_KEY`; keep that key stable and private.
+Configure each provider app once in Railway using the server-side environment variables below. Customers then click the provider's Connect button and authorize their own account; they must never enter the developer app's Client ID or Secret. Keep all secrets private and set `ENCRYPTION_KEY` to a stable value.
+
+| Provider | Railway variables |
+| --- | --- |
+| Facebook and Instagram | `META_CLIENT_ID`, `META_CLIENT_SECRET` |
+| YouTube | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+| TikTok | `TIKTOK_CLIENT_KEY`, `TIKTOK_CLIENT_SECRET` |
+| X | `X_CLIENT_ID`, `X_CLIENT_SECRET` |
+| Pinterest | `PINTEREST_CLIENT_ID`, `PINTEREST_CLIENT_SECRET` |
+| Threads | `THREADS_CLIENT_ID`, `THREADS_CLIENT_SECRET` |
+
+The OAuth callback URL must be registered in each provider app. For Meta, add the Facebook Login and Instagram products and configure the applicable redirect URI, products, and approved permissions. Meta review and permission approval are controlled by Meta and cannot be bypassed by PostFlow.
 
 WhatsApp uses Meta Embedded Signup, not the standard OAuth redirect. Set `WHATSAPP_EMBEDDED_SIGNUP_CONFIG_ID` in Railway and use the Meta App ID that owns that signup configuration. Meta app review, WhatsApp Business permissions, a working webhook, a WABA phone number, and its six-digit registration PIN are required before the app can show Connected.
 
