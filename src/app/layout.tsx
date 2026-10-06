@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "PostFlow | Social content planning and publishing workspace",
   description: "PostFlow helps teams plan social content, manage media and reviews, schedule posts, and connect supported social accounts.",
   metadataBase: new URL("https://postflow.taskflow.monster"),
+  other: {
+    "facebook-domain-verification": "ya169ykhjen5dwvk45uz84p0hzia6t",
+  },
   alternates: { canonical: "/" },
   openGraph: {
     title: "PostFlow | Social content planning and publishing workspace",
