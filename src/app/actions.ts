@@ -110,25 +110,34 @@ export async function acceptTermsAction(formData: FormData) {
   redirect("/dashboard");
 }
 
-export async function requestAccessAction(formData: FormData) {
+export async function requestAccessAction(
+  _previousState: { error?: string } | null,
+  formData: FormData,
+): Promise<{ error?: string } | null> {
   const name = String(formData.get("name") ?? "").trim();
   const username = String(formData.get("username") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const inviteCode = String(formData.get("inviteCode") ?? "").trim();
-  if (formData.get("legalTerms") !== "yes") throw new Error("Accept the Terms of Service and Privacy Policy before requesting access.");
+  if (formData.get("legalTerms") !== "yes") {
+    return { error: "Accept the Terms of Service and Privacy Policy before requesting access." };
+  }
 
   if (!name || !username || !email || !password || !inviteCode) {
-    throw new Error("Name, username, email, password, and access code are required.");
+    return { error: "Name, username, email, password, and access code are required." };
   }
 
   if (name.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     || !/^[a-zA-Z0-9_.-]{3,30}$/.test(username) || password.length < 12 || password.length > 128) {
-    throw new Error("Choose a 3-30 character username and a password with at least 12 characters.");
+    return { error: "Choose a 3-30 character username and a password with at least 12 characters." };
+  }
+
+  if (!process.env.ACCESS_REQUEST_CODE?.trim()) {
+    return { error: "Access requests are not configured. Please contact the administrator." };
   }
 
   if (!verifyInviteCode(inviteCode)) {
-    throw new Error("That access code is invalid or access requests are not available.");
+    return { error: "That access code is incorrect. Please contact the administrator if you need the code." };
   }
 
   const store = readStore();
@@ -137,7 +146,7 @@ export async function requestAccessAction(formData: FormData) {
   const usernameTaken = store.users.some((user) => user.username?.toLowerCase() === username.toLowerCase())
     || store.accessRequests.some((request) => request.username?.toLowerCase() === username.toLowerCase());
   if (emailTaken || usernameTaken) {
-    throw new Error("That email or username is already registered or awaiting review.");
+    return { error: "That email or username is already registered or awaiting review." };
   }
 
   const request = createAccessRequest({
