@@ -1,20 +1,6 @@
-import Link from "next/link";
-import LegalLinks from "@/app/components/LegalLinks";
-import RequestAccessForm from "./RequestAccessForm";
+import { redirect } from "next/navigation";
 
-export default function RequestAccessPage() {
-  return (
-    <main className="auth-shell">
-      <section className="auth-card">
-        <p className="eyebrow">Access required</p>
-        <h1>Request a customer account</h1>
-        <RequestAccessForm />
-        <div className="auth-links">
-          <a href="/login">Login</a>
-          <Link href="/">Home</Link>
-        </div>
-        <LegalLinks />
-      </section>
-    </main>
-  );
+export default async function RequestAccessPage({ searchParams }: { searchParams: Promise<{ plan?: string }> }) {
+  const { plan } = await searchParams;
+  redirect(plan ? `/upgrade?plan=${encodeURIComponent(plan)}` : "/upgrade");
 }

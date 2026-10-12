@@ -1,5 +1,5 @@
 import { requireCustomer } from "@/lib/access";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../tests/store";
 import CustomerNav from "@/app/components/CustomerNav";
 
 export default async function HistoryPage() {

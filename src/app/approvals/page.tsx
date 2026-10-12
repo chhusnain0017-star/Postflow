@@ -1,7 +1,7 @@
 import { requirePostApprover } from "@/lib/access";
 import { approvePostAction, rejectPostAction } from "@/app/actions";
 import CustomerNav from "@/app/components/CustomerNav";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../tests/store";
 
 export default async function ApprovalsPage() {
   const user = await requirePostApprover();

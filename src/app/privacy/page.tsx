@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <h2>1. Information we collect</h2>
       <p>The information we handle depends on the features you and your workspace administrator use. It may include:</p>
       <ul>
-        <li><strong>Account and access information:</strong> name, email address, username, password (stored as a password hash), access-request status, account and workspace identifiers, role, invitation and approval records, and account dates.</li>
+        <li><strong>Account and access information:</strong> Google account identifier, name, verified email address, optional profile image, access-request details (including WhatsApp number and requested subscription plan), account and workspace identifiers, role, invitation and approval records, and trial or subscription dates. Legacy password hashes may remain for existing accounts.</li>
         <li><strong>Workspace content:</strong> drafts and post text, captions, hashtags, campaign names, selected platforms, schedules and time zones, approval history, and media or documents you upload. Uploaded-file records can include the original filename, file type, file size, tags, and upload time.</li>
         <li><strong>Team and security records:</strong> team membership and permissions, invitation records, sign-in and session information, OAuth authorization state, and audit events that record administrative or workspace actions.</li>
         <li><strong>Connected social-account information:</strong> the provider account identifier and display name returned during authorization, the permissions (scopes) granted, connection status and time, token expiry information, and OAuth access or refresh tokens needed to maintain the connection.</li>
@@ -25,7 +25,7 @@ export default function PrivacyPage() {
       <h2>2. How we use your data</h2>
       <p>We use this information only as needed to provide and administer PostFlow, including to:</p>
       <ul>
-        <li>create and administer accounts, workspaces, invitations, roles, and access approvals;</li>
+        <li>create and administer Google-authenticated accounts, workspaces, invitations, roles, trial access, and subscription requests;</li>
         <li>authenticate users, maintain sessions, and help detect, investigate, or prevent misuse;</li>
         <li>save and organize content, media, schedules, approvals, campaigns, and reports;</li>
         <li>connect a social account when you initiate authorization and perform the action you request for that account;</li>
@@ -35,8 +35,9 @@ export default function PrivacyPage() {
       <p>PostFlow does not sell personal information, use it to serve advertising, or use connected-account information for purposes unrelated to the requested service.</p>
 
       <h2>3. Google and YouTube API data</h2>
-      <p>If you choose to connect YouTube, PostFlow sends you to Google’s authorization service. The current Google authorization requests the basic OpenID Connect profile and email scopes and the YouTube upload scope. From Google, PostFlow receives account identity information (such as the Google account identifier and the available name or email), an authorization result, and access and, when returned, refresh tokens. PostFlow records the connected account identity, granted scopes, token expiry, and encrypted tokens so it can show the connection and perform authorized YouTube uploads.</p>
-      <p>PostFlow uses Google user data only to identify the account you connected, maintain that connection, and provide the YouTube features you choose to use. When you request a YouTube publishing action, the content and information required for that action are sent to YouTube. A draft is not sent to Google merely because it is saved in PostFlow. PostFlow does not use Google user data for advertising, sell it, or use it to build advertising profiles.</p>
+      <p>When you choose Continue with Google, PostFlow uses OpenID Connect to verify your identity and email and receives your Google account identifier, verified email address, name, and, when available, profile image. This sign-in flow does not request YouTube channel access and its access token is not retained after identity verification.</p>
+      <p>If you separately choose to connect YouTube, PostFlow sends you to Google’s authorization service and requests the basic OpenID Connect profile and email scopes plus the YouTube upload scope. PostFlow stores the connected account identity, granted scopes, token expiry, and encrypted tokens so it can show the connection and perform authorized YouTube features you choose to use. A draft is not sent to Google merely because it is saved in PostFlow.</p>
+      <p>PostFlow does not use Google user data for advertising, sell it, or use it to build advertising profiles.</p>
       <p>PostFlow does not currently request Google Analytics access or use the YouTube Analytics API to read channel analytics. Post-performance information shown in PostFlow is stored for the workspace when it is supplied through the app’s authorized metrics-ingestion process; it is not obtained from Google Analytics through the YouTube connection described above.</p>
       <p>PostFlow’s access to and use of information received from Google APIs complies with the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Google API Services User Data Policy</a>, including its Limited Use requirements. We do not transfer Google user data to third parties except as necessary to provide or improve the user-facing feature you requested, to comply with law, or as otherwise permitted by that policy. Google processes information under its own terms and privacy policy.</p>
 
@@ -53,7 +54,7 @@ export default function PrivacyPage() {
       <h2>5. Storage and security</h2>
       <p>Workspace records and uploaded files are stored in the application’s configured hosting environment. We use reasonable technical and organizational measures to help protect them. In particular:</p>
       <ul>
-        <li>passwords are hashed before they are stored;</li>
+        <li>legacy passwords are hashed before they are stored;</li>
         <li>social-provider client credentials and OAuth tokens are encrypted using AES-256-GCM with a server-side encryption key;</li>
         <li>the sign-in session is maintained with an HTTP-only cookie, marked secure in production; and</li>
         <li>workspace and account controls restrict access according to account status and role.</li>

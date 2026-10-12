@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { verifySessionToken } from "@/lib/auth";
-import { readStore, upsertUser } from "@/lib/store";
+import { readStore, upsertUser } from "../../../../../tests/store";
 import { getAppRedirectUrl } from "@/lib/redirect-url";
 
 export async function POST(request: Request) {

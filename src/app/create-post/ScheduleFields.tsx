@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 
 export default function ScheduleFields() {
-  const [timeZone, setTimeZone] = useState("UTC");
+  const timeZoneInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC");
+    if (timeZoneInput.current) {
+      timeZoneInput.current.value = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    }
   }, []);
 
   return (
@@ -15,7 +17,7 @@ export default function ScheduleFields() {
         <span>Schedule for</span>
         <input type="datetime-local" name="scheduledAt" />
       </label>
-      <input type="hidden" name="timeZone" value={timeZone} />
+      <input ref={timeZoneInput} type="hidden" name="timeZone" defaultValue="UTC" />
       <p className="form-hint">Scheduled time uses your device timezone.</p>
     </>
   );

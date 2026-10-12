@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/access";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../tests/store";
 
 export default async function AdminPage() {
   await requireAdmin();

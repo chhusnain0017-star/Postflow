@@ -3,8 +3,8 @@ import { mkdir, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/access";
-import { getAssetStorageDir, readStore, writeStore } from "@/lib/store";
-import { addAuditLog } from "@/lib/store";
+import { getAssetStorageDir, readStore, writeStore } from "../../../../tests/store";
+import { addAuditLog } from "../../../../tests/store";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,12 @@ const allowedTypes: Record<string, string> = {
 const maxFileSize = 30 * 1024 * 1024;
 
 function uploadError(request: Request, message: string) {
+  if (request.headers.get("accept")?.includes("application/json")) {
+    return NextResponse.json({ error: message }, { status: 400 });
+  }
   const url = new URL("/library", request.url);
+  const destination = new URL(request.url).searchParams.get("returnTo");
+  if (destination === "/dashboard") url.pathname = "/dashboard";
   url.searchParams.set("uploadError", message);
   return NextResponse.redirect(url, { status: 303 });
 }
@@ -38,6 +43,9 @@ export async function POST(request: Request) {
 
   const extension = allowedTypes[file.type];
   if (!extension) return uploadError(request, "Supported files: images, MP4/WebM/MOV video, MP3/WAV audio, or PDF.");
+  if (new URL(request.url).searchParams.get("videoOnly") === "1" && !file.type.startsWith("video/")) {
+    return uploadError(request, "Choose an MP4, WebM, or MOV video file.");
+  }
 
   const id = `asset-${randomUUID()}`;
   const storageKey = `${randomUUID()}.${extension}`;
@@ -49,7 +57,7 @@ export async function POST(request: Request) {
   await writeFile(filePath, Buffer.from(await file.arrayBuffer()), { flag: "wx" });
   try {
     const store = readStore();
-    store.assets.push({
+    const asset = {
       id,
       workspaceId: user.workspaceId,
       uploadedById: user.id,
@@ -59,9 +67,15 @@ export async function POST(request: Request) {
       tags,
       storageKey,
       createdAt: new Date().toISOString(),
-    });
+    };
+    store.assets.push(asset);
     writeStore(store);
     addAuditLog({ workspaceId: user.workspaceId, userId: user.id, event: "Asset Uploaded", details: `${file.name.slice(0, 180)} (${file.size} bytes)` });
+    if (request.headers.get("accept")?.includes("application/json")) {
+      return NextResponse.json({
+        asset: { id: asset.id, originalName: asset.originalName, mimeType: asset.mimeType, size: asset.size },
+      }, { status: 201 });
+    }
   } catch (error) {
     await unlink(filePath).catch(() => undefined);
     throw error;

@@ -3,7 +3,7 @@ import WhatsAppSignupButton from "@/app/integrations/whatsapp/WhatsAppSignupButt
 import { decryptProviderCredentials } from "@/lib/auth";
 import { getOAuthAppCredentials } from "@/lib/oauth";
 import { requireCustomer } from "@/lib/access";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../../tests/store";
 
 export default async function WhatsAppConnectPage() {
   const user = await requireCustomer();

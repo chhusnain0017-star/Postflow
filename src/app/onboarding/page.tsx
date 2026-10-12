@@ -14,7 +14,7 @@ export default async function OnboardingPage() {
         <h1>Choose your accounts carefully.</h1>
         <div className="terms-copy">
           <p>Connections made for this PostFlow ID are permanent. Once social accounts are connected, you cannot replace them or connect a different account on this ID. A different set of accounts requires a new PostFlow ID.</p>
-          <p>Your login is for your use only. Only one active session is allowed per ID; signing in again ends the previous session.</p>
+          <p>Your Google sign-in is for your use only. Only one active session is allowed per PostFlow account; signing in again ends the previous session.</p>
           <p>Platform publishing is not active until the required provider OAuth setup is configured. Do not enter your social passwords into PostFlow.</p>
         </div>
         <form action={acceptTermsAction} className="form-stack">

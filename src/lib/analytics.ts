@@ -1,4 +1,4 @@
-import type { MetricRecord } from "@/lib/store";
+import type { MetricRecord } from "../../tests/store";
 
 export type MetricGroupBy = "platform" | "campaign";
 export type MetricTotals = Pick<MetricRecord, "impressions" | "reach" | "videoViews" | "likes" | "comments" | "shares" | "saves" | "clicks">;

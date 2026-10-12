@@ -17,6 +17,8 @@ export type UserRecord = {
   workspaceId: string;
   accessStartDate?: string;
   accessExpiryDate?: string;
+  googleSubject?: string;
+  avatarUrl?: string;
   termsAcceptedAt?: string;
   legalTermsAcceptedAt?: string;
   integrationsLockedAt?: string;
@@ -28,10 +30,12 @@ export type UserRecord = {
 export type AccessRequest = {
   id: string;
   name: string;
-  username: string;
+  username?: string;
   email: string;
-  passwordHash: string;
-  inviteCodeVerified: boolean;
+  passwordHash?: string;
+  whatsappNumber?: string;
+  subscriptionPlan?: "1-month" | "6-months" | "1-year";
+  inviteCodeVerified?: boolean;
   legalTermsAcceptedAt?: string;
   status: AccessStatus;
   createdAt: string;
@@ -116,6 +120,15 @@ export type SocialAccount = {
   grantedScopes?: string[];
   businessAccountId?: string;
   phoneNumberId?: string;
+  pageSelectionRequired?: boolean;
+};
+
+export type GoogleLoginState = {
+  id: string;
+  stateHash: string;
+  codeVerifierEncrypted: string;
+  createdAt: string;
+  expiresAt: string;
 };
 
 export type OAuthStateRecord = {
@@ -145,6 +158,7 @@ export type AppData = {
   posts: PostRecord[];
   socialAccounts: SocialAccount[];
   oauthStates: OAuthStateRecord[];
+  googleLoginStates: GoogleLoginState[];
   assets: AssetRecord[];
   metrics: MetricRecord[];
   teamInvites: TeamInviteRecord[];
@@ -181,6 +195,7 @@ function defaultData(): AppData {
     posts: [],
     socialAccounts: [],
     oauthStates: [],
+    googleLoginStates: [],
     assets: [],
     metrics: [],
     teamInvites: [],
@@ -203,6 +218,7 @@ export function readStore(): AppData {
       posts: parsed.posts ?? [],
       socialAccounts: parsed.socialAccounts ?? [],
       oauthStates: parsed.oauthStates ?? [],
+      googleLoginStates: parsed.googleLoginStates ?? [],
       assets: parsed.assets ?? [],
       metrics: parsed.metrics ?? [],
       teamInvites: parsed.teamInvites ?? [],

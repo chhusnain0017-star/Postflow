@@ -4,7 +4,7 @@ import { requireCustomer } from "@/lib/access";
 import { decryptProviderCredentials, encryptOAuthTokens } from "@/lib/auth";
 import { createAuthorizationUrl, getOAuthAppCredentials, getOAuthProviderConfig, getSocialPlatform } from "@/lib/oauth";
 import { getAppRedirectUrl } from "@/lib/redirect-url";
-import { readStore, writeStore } from "@/lib/store";
+import { readStore, writeStore } from "../../../../../../tests/store";
 
 export const runtime = "nodejs";
 

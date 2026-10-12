@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/access";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../../tests/store";
 import { renewCustomerContractAction } from "@/app/actions";
 import AdminIntegrationRemovalForm from "@/app/admin/customers/AdminIntegrationRemovalForm";
 

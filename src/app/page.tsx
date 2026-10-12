@@ -11,9 +11,10 @@ export default function Home() {
           <h1>PostFlow<br />Upload once. Posts everywhere.</h1>
           <p className="home-intro">PostFlow, by TaskFlow.monster, is a workspace for teams to plan social content, organize media, review posts, and manage supported social-account connections.</p>
           <div className="hero-actions">
-            <a href="/login" className="primary-btn">Login</a>
-            <a href="/request-access" className="secondary-btn">Request access</a>
-            <a href="/admin-login" className="secondary-btn admin-action">Admin login</a>
+            <a href="/api/auth/google" className="google-signin-btn">
+              <span className="google-mark" aria-hidden="true">G</span>
+              Continue with Google
+            </a>
           </div>
         </div>
 
@@ -60,9 +61,9 @@ export default function Home() {
         </article>
 
         <article className="home-detail-card">
-          <h2>Why PostFlow requests Google access</h2>
-          <p>If you choose to connect YouTube, Google authorization currently requests your basic account identity (OpenID, profile, and email) and YouTube upload permission. PostFlow uses the identity to identify the account you selected and stores the authorization tokens, encrypted, to maintain that connection and support YouTube upload features you choose to use.</p>
-          <p>PostFlow does not request Google Analytics access. Saving a draft does not send it to Google; content is sent to YouTube only when you request a supported and configured YouTube publishing action.</p>
+          <h2>Google sign-in and YouTube</h2>
+          <p>PostFlow uses Google OpenID Connect to sign you in with your verified email address and profile. Sign-in does not grant access to your YouTube channel. If you later connect YouTube, PostFlow will separately ask for the permissions needed for the YouTube features you choose to use.</p>
+          <p>PostFlow does not request Google Analytics access. Saving a draft does not send it to Google; content is sent to YouTube only after you separately authorize a supported YouTube publishing action.</p>
           <p className="privacy-home-link">Read the <Link href="/privacy">PostFlow Privacy Policy</Link> for full details about information access, use, storage, sharing, and deletion. This public page and policy are available without signing in.</p>
         </article>
       </section>

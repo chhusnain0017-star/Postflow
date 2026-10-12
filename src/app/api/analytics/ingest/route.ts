@@ -1,6 +1,6 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { readStore, writeStore } from "@/lib/store";
+import { readStore, writeStore } from "../../../../../tests/store";
 import { isSocialPlatform } from "@/lib/platforms";
 
 export const runtime = "nodejs";

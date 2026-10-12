@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/access";
-import { getAssetStorageDir, readStore } from "@/lib/store";
+import { getAssetStorageDir, readStore } from "../../../../../tests/store";
 
 export const runtime = "nodejs";
 

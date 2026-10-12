@@ -3,7 +3,7 @@ import { createCustomerPost } from "@/app/actions";
 import { SOCIAL_PLATFORMS } from "@/lib/platforms";
 import ScheduleFields from "@/app/create-post/ScheduleFields";
 import CustomerNav from "@/app/components/CustomerNav";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../tests/store";
 
 export default async function CreatePostPage() {
   const user = await requireCustomer();

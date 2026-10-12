@@ -2,7 +2,7 @@ import { requireTeamManager } from "@/lib/access";
 import { suspendTeamMemberAction, updateTeamMemberAction } from "@/app/actions";
 import CustomerNav from "@/app/components/CustomerNav";
 import InviteForm from "@/app/team/InviteForm";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../tests/store";
 
 const roles = ["ADMIN", "EDITOR", "APPROVER", "MEMBER"] as const;
 

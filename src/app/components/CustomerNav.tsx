@@ -1,42 +1,63 @@
+import Image from "next/image";
 import Link from "next/link";
-import type { UserRole } from "@/lib/store";
+import type { UserRole } from "../../../tests/store";
+import { requireSignedInUser } from "@/lib/access";
 
 const customerLinks = [
-  { href: "/dashboard", label: "Overview", active: "dashboard" },
-  { href: "/calendar", label: "Calendar", active: "calendar" },
-  { href: "/create-post", label: "Create post", active: "create-post" },
-  { href: "/analytics", label: "Analytics", active: "analytics" },
-  { href: "/library", label: "Content library", active: "library" },
-  { href: "/integrations", label: "Integrations", active: "integrations" },
-  { href: "/team", label: "Team", active: "team" },
-  { href: "/history", label: "History", active: "history" },
-  { href: "/settings", label: "Settings", active: "settings" },
+  { href: "/dashboard", label: "Home", active: "dashboard", icon: "⌂" },
+  { href: "/dashboard", label: "Dashboard", active: "dashboard", icon: "▦" },
+  { href: "/library", label: "Documents", active: "library", icon: "▤" },
+  { href: "/history", label: "Messages", active: "history", icon: "✉" },
+  { href: "/team", label: "Community", active: "team", icon: "♧" },
+  { href: "/create-post", label: "Products", active: "create-post", icon: "◇" },
+  { href: "/integrations", label: "Resources", active: "integrations", icon: "◎" },
+  { href: "/settings", label: "Settings", active: "settings", icon: "⚙" },
+  { href: "/calendar", label: "Calendar", active: "calendar", icon: "▦" },
+  { href: "/analytics", label: "Analytics", active: "analytics", icon: "↗" },
 ];
 
-export default function CustomerNav({ active, role }: { active: string; role: UserRole }) {
-  const canApprove = role === "OWNER" || role === "ADMIN" || role === "APPROVER";
+export default async function CustomerNav({ active, role }: { active: string; role: UserRole }) {
+  const user = await requireSignedInUser();
 
   return (
     <aside className="side-nav">
-      <div className="brand">PostFlow</div>
-      <aside className="privacy-update" aria-label="Privacy update">
-        <strong>Privacy update · October 4, 2026</strong>
-        <p>We clarified how Google account information and YouTube access are used. We will post an in-app notice here if our use of Google user data changes.</p>
-        <Link href="/privacy">Review the Privacy Policy</Link>
-      </aside>
-      <nav>
-        {customerLinks.slice(0, 3).map((link) => (
-          <Link key={link.href} href={link.href} className={active === link.active ? "active" : undefined}>{link.label}</Link>
+      <Link href="/dashboard" className="brand brand-image">
+        <Image src="/postflow-logo-green.png" alt="PostFlow" width={42} height={42} priority />
+        <span>PostFlow</span>
+      </Link>
+      <nav aria-label="Main navigation">
+        {customerLinks.map((link) => (
+          <Link key={`${link.label}-${link.href}`} href={link.href} className={active === link.active ? "active" : undefined}>
+            <span className="side-nav-icon" aria-hidden="true">{link.icon}</span>
+            {link.label}
+          </Link>
         ))}
-        {canApprove && <Link href="/approvals" className={active === "approvals" ? "active" : undefined}>Approvals</Link>}
-        {customerLinks.slice(3).map((link) => (
-          <Link key={link.href} href={link.href} className={active === link.active ? "active" : undefined}>{link.label}</Link>
-        ))}
-        <Link href="/privacy">Privacy Policy</Link>
+        {(role === "OWNER" || role === "ADMIN" || role === "APPROVER") && (
+          <Link href="/approvals" className={active === "approvals" ? "active" : undefined}>
+            <span className="side-nav-icon" aria-hidden="true">✓</span>
+            Approvals
+          </Link>
+        )}
       </nav>
-      <form action="/api/auth/logout" method="POST" className="logout-form">
-        <button type="submit">Logout</button>
-      </form>
+      <div className="side-nav-account">
+        <Link href="/settings" className="side-account-settings" aria-label="Settings">⚙</Link>
+        <Image
+          src={user.avatarUrl || "/postflow-logo-green.png"}
+          alt=""
+          width={40}
+          height={40}
+          className="account-avatar"
+          unoptimized
+        />
+        <div className="account-copy">
+          <strong>{user.name}</strong>
+          <span><i className="online-indicator" />Online</span>
+          <small>{user.email}</small>
+        </div>
+        <form action="/api/auth/logout" method="POST">
+          <button type="submit" className="account-logout" aria-label="Log out">↗</button>
+        </form>
+      </div>
     </aside>
   );
 }

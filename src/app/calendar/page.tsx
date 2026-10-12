@@ -2,7 +2,7 @@ import { requireCustomer } from "@/lib/access";
 import { cancelScheduledPostAction, reschedulePostAction } from "@/app/actions";
 import CustomerNav from "@/app/components/CustomerNav";
 import ScheduleFields from "@/app/create-post/ScheduleFields";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../tests/store";
 
 export default async function CalendarPage() {
   const user = await requireCustomer();

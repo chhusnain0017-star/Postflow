@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { acceptTeamInviteAction } from "@/app/actions";
 import Link from "next/link";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../../tests/store";
 
 export default async function AcceptTeamInvitePage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token = "" } = await searchParams;

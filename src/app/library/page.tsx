@@ -2,7 +2,7 @@ import Image from "next/image";
 import { archiveAssetAction } from "@/app/actions";
 import CustomerNav from "@/app/components/CustomerNav";
 import { requireCustomer } from "@/lib/access";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../tests/store";
 
 export default async function LibraryPage({ searchParams }: { searchParams: Promise<{ uploadError?: string }> }) {
   const user = await requireCustomer();

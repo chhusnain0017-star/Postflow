@@ -7,12 +7,12 @@ export default async function WaitingPage({ searchParams }: { searchParams: Prom
   return (
     <main className="auth-shell">
       <section className="auth-card">
-        <p className="eyebrow">{expired ? "Contract ended" : "Approval status"}</p>
-        <h1>{expired ? "Your access has expired" : "Request received — approval required"}</h1>
+        <p className="eyebrow">{expired ? "Trial ended" : "Sign-in required"}</p>
+        <h1>{expired ? "Your free trial has ended" : "Continue with Google"}</h1>
         <p>{expired
-          ? "Your one-year contract has ended and account access is stopped. Contact the administrator to arrange renewal; sign in again after the renewal is confirmed."
-          : "Your access request was submitted successfully. This is not an active account yet. The platform administrator must approve it under Admin → Requests. After approval, sign in with the email address and password you entered in the request."}</p>
-        <Link href="/" className="primary-btn inline-link">Back home</Link>
+          ? "Request a subscription plan and we’ll contact you within 24 hours to help you continue using PostFlow."
+          : "Sign in with your Google account to start or continue your PostFlow workspace."}</p>
+        <Link href={expired ? "/upgrade?status=expired" : "/login"} className="primary-btn inline-link">{expired ? "View subscription plans" : "Continue with Google"}</Link>
       </section>
     </main>
   );

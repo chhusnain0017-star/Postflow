@@ -4,8 +4,8 @@ import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { addAuditLog, createAccessRequest, createPost, ensureConfiguredAdmin, readStore, seedDemoData, upsertUser, writeStore } from "@/lib/store";
-import { createSessionToken, decryptProviderCredentials, encryptOAuthTokens, hashPassword, verifyInviteCode, verifyPassword, verifySessionToken } from "@/lib/auth";
+import { addAuditLog, createAccessRequest, createPost, readStore, seedDemoData, upsertUser, writeStore } from "../../tests/store";
+import { decryptProviderCredentials, encryptOAuthTokens, hashPassword, verifySessionToken } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { requireAdmin, requireCustomer, requirePostApprover, requireSignedInUser, requireTeamManager } from "@/lib/access";
 import { getOAuthAppCredentials } from "@/lib/oauth";
@@ -14,71 +14,8 @@ import { localDateTimeToUtc } from "@/lib/time-zone";
 import { addOneYear } from "@/lib/billing";
 
 export async function loginAction(formData: FormData) {
-  const identifier = String(formData.get("identifier") ?? formData.get("email") ?? formData.get("superAdminEmail") ?? "").trim();
-  const password = String(formData.get("password") ?? formData.get("superAdminPassword") ?? "");
-  const loginMode = String(formData.get("loginMode") ?? "customer");
-  if (loginMode !== "admin" && loginMode !== "customer") throw new Error("Invalid login option.");
-  let user;
-  if (loginMode === "admin") {
-    user = ensureConfiguredAdmin(
-      String(formData.get("superAdminEmail") ?? identifier),
-      String(formData.get("superAdminPassword") ?? password),
-    );
-  } else {
-    user = readStore().users.find((entry) => entry.email.toLowerCase() === identifier.toLowerCase()
-      || entry.username?.toLowerCase() === identifier.toLowerCase());
-    if (!user || user.role === "SYSTEM_ADMIN" || !verifyPassword(password, user.passwordHash)) {
-      throw new Error("Invalid username/email or password.");
-    }
-  }
-
-  if (user.status === "EXPIRED") redirect("/waiting?status=expired");
-  if (user.status !== "APPROVED") {
-    throw new Error("Your access is not active. Please wait for approval.");
-  }
-  if (user.accessExpiryDate) {
-    const expiry = new Date(user.accessExpiryDate).getTime();
-    if (!Number.isFinite(expiry) || Date.now() >= expiry) {
-      user.status = "EXPIRED";
-      delete user.activeSessionId;
-      upsertUser(user);
-      redirect("/waiting?status=expired");
-    }
-  }
-
-  const sessionId = randomUUID();
-  const token = createSessionToken({
-    id: user.id,
-    email: user.email,
-    workspaceId: user.workspaceId,
-    role: user.role,
-    sessionId,
-  });
-
-  const cookieStore = await cookies();
-  cookieStore.set("postflow_session", token, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 60 * 60 * 24 * 7,
-  });
-
-  user.lastLogin = new Date().toISOString();
-  user.activeSessionId = sessionId;
-  upsertUser(user);
-  addAuditLog({
-    workspaceId: user.workspaceId,
-    userId: user.id,
-    event: "Login",
-    details: `${user.name} logged in successfully`,
-  });
-
-  if (user.role === "SYSTEM_ADMIN") {
-    redirect("/admin");
-  }
-  if (!user.termsAcceptedAt) redirect("/onboarding");
-  redirect("/dashboard");
+  void formData;
+  throw new Error("Password login is no longer available. Continue with Google instead.");
 }
 
 export async function logoutAction() {
@@ -112,61 +49,32 @@ export async function acceptTermsAction(formData: FormData) {
 }
 
 export async function requestAccessAction(
-  _previousState: { error?: string } | null,
+  _previousState: { error?: string; success?: boolean } | null,
   formData: FormData,
-): Promise<{ error?: string } | null> {
+): Promise<{ error?: string; success?: boolean } | null> {
   const name = String(formData.get("name") ?? "").trim();
-  const username = String(formData.get("username") ?? "").trim();
-  const email = String(formData.get("email") ?? "").trim();
-  const password = String(formData.get("password") ?? "");
-  const inviteCode = String(formData.get("inviteCode") ?? "").trim();
-  if (formData.get("legalTerms") !== "yes") {
-    return { error: "Accept the Terms of Service and Privacy Policy before requesting access." };
-  }
-
-  if (!name || !username || !email || !password || !inviteCode) {
-    return { error: "Name, username, email, password, and access code are required." };
-  }
-
-  if (name.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-    || !/^[a-zA-Z0-9_.-]{3,30}$/.test(username) || password.length < 12 || password.length > 128) {
-    return { error: "Choose a 3-30 character username and a password with at least 12 characters." };
-  }
-
-  if (!process.env.ACCESS_REQUEST_CODE?.trim()) {
-    return { error: "Access requests are not configured. Please contact the administrator." };
-  }
-
-  if (!verifyInviteCode(inviteCode)) {
-    return { error: "That access code is incorrect. Please contact the administrator if you need the code." };
-  }
-
-  const store = readStore();
-  const emailTaken = store.users.some((user) => user.email.toLowerCase() === email.toLowerCase())
-    || store.accessRequests.some((request) => request.email.toLowerCase() === email.toLowerCase());
-  const usernameTaken = store.users.some((user) => user.username?.toLowerCase() === username.toLowerCase())
-    || store.accessRequests.some((request) => request.username?.toLowerCase() === username.toLowerCase());
-  if (emailTaken || usernameTaken) {
-    return { error: "That email or username is already registered or awaiting review." };
+  const whatsappNumber = String(formData.get("whatsappNumber") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const subscriptionPlan = String(formData.get("subscriptionPlan") ?? "");
+  if (!name || name.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+    || !/^\+?[0-9\s().-]{7,24}$/.test(whatsappNumber)
+    || !["1-month", "6-months", "1-year"].includes(subscriptionPlan)) {
+    return { error: "Enter your full name, valid WhatsApp number, email address, and subscription plan." };
   }
 
   const request = createAccessRequest({
     name,
-    username,
     email,
-    passwordHash: hashPassword(password),
-    inviteCodeVerified: true,
-    legalTermsAcceptedAt: new Date().toISOString(),
+    whatsappNumber,
+    subscriptionPlan: subscriptionPlan as "1-month" | "6-months" | "1-year",
     status: "PENDING",
   });
-
   addAuditLog({
     userId: request.id,
-    event: "Access Request",
-    details: `${name} submitted an access request`,
+    event: "Subscription Request",
+    details: `${name} requested the ${subscriptionPlan} subscription`,
   });
-
-  redirect("/waiting");
+  return { success: true };
 }
 
 async function requireSystemAdmin() {
@@ -182,7 +90,20 @@ export async function approveAccessRequestAction(formData: FormData) {
   if (!request) {
     throw new Error("Access request not found.");
   }
-  if (!request.inviteCodeVerified) throw new Error("This request did not pass access-code verification.");
+  if (request.subscriptionPlan) {
+    request.status = "APPROVED";
+    request.reviewedAt = new Date().toISOString();
+    writeStore(store);
+    addAuditLog({
+      userId: request.id,
+      event: "Subscription Request Reviewed",
+      details: `${request.email} subscription request was approved by admin`,
+    });
+    redirect("/admin/requests");
+  }
+  if (!request.inviteCodeVerified || !request.passwordHash || !request.username) {
+    throw new Error("This legacy request does not contain valid account credentials.");
+  }
 
   const existing = store.users.find((entry) => entry.email.toLowerCase() === request.email.toLowerCase()
     || entry.username?.toLowerCase() === request.username?.toLowerCase());
@@ -254,6 +175,9 @@ export async function createCustomerPost(formData: FormData) {
   if (platforms.length === 0) throw new Error("Select at least one supported platform.");
 
   const assetIds = [...new Set(formData.getAll("assetIds").map(String))];
+  if (formData.get("requiresVideo") === "yes" && assetIds.filter(Boolean).length === 0) {
+    throw new Error("Upload a video before creating this post.");
+  }
   const currentStore = readStore();
   const ownedAssetIds = new Set(currentStore.assets.filter((asset) => asset.workspaceId === user.workspaceId && !asset.archivedAt).map((asset) => asset.id));
   if (assetIds.some((assetId) => !ownedAssetIds.has(assetId))) throw new Error("A selected asset is missing or does not belong to this workspace.");

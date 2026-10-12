@@ -9,14 +9,14 @@ export const metadata: Metadata = {
 export default function TermsPage() {
   return (
     <LegalPageShell title="Terms of Service">
-      <p>These terms govern your use of PostFlow. By requesting access, accepting an invitation, or using an approved account, you agree to these terms and the <a href="/privacy">Privacy Policy</a>. If you do not agree, do not use the service.</p>
+      <p>These terms govern your use of PostFlow. By signing in with Google, accepting an invitation, requesting a subscription, or using a workspace, you agree to these terms and the <a href="/privacy">Privacy Policy</a>. If you do not agree, do not use the service.</p>
 
       <h2>1. Access and account security</h2>
-      <p>Access is limited to accounts approved by the platform administrator. Keep your password and invitation details private, use your account only for yourself, and tell the administrator promptly if you suspect unauthorized access. One active session is allowed per account; a new sign-in may end an existing session.</p>
+      <p>Customer sign-in uses a Google account with a verified email address. Keep your Google account and invitation details private, use your account only for yourself, and tell the administrator promptly if you suspect unauthorized access. One active session is allowed per account; a new sign-in may end an existing session.</p>
 
       <h2>2. Contract term and renewal</h2>
-      <p>Customer access is granted for one year beginning on the date the administrator approves and activates the account. Team-member access begins when the invitation is accepted. Access ends on the next calendar anniversary. On expiry, access is stopped until the administrator confirms renewal.</p>
-      <p>PostFlow does not currently process payments or automatically charge for renewal. Contact the administrator to arrange payment. An administrator may renew access after confirming payment; the next one-year term then begins on the renewal date.</p>
+      <p>A new customer account receives a seven-day free trial beginning at the first successful Google sign-in. Trial access ends exactly seven days later. On expiry, workspace access is stopped until a subscription is arranged. Team-member access is subject to the workspace owner’s active access.</p>
+      <p>Subscription requests are available for one-month, six-month, and one-year periods. PostFlow does not currently process online payments or automatically charge for renewal. Submitting a request is not a payment or activation; PostFlow will contact you within 24 hours to discuss processing the selected subscription.</p>
 
       <h2>3. Social accounts and integrations</h2>
       <p>You authorize providers through their own authorization screens and are responsible for selecting the correct accounts, business assets, permissions, and publishing destinations. Customers cannot replace saved platform credentials themselves. An administrator may remove the saved credentials and locally stored tokens so the integration can be configured again; this does not revoke access with the provider, which may need to be revoked separately.</p>

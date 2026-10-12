@@ -4,7 +4,7 @@ import { decryptOAuthTokens, decryptProviderCredentials, encryptOAuthTokens } fr
 import { getOAuthAppCredentials, getOAuthProviderConfig } from "@/lib/oauth";
 import type { SocialPlatform } from "@/lib/platforms";
 import { getAppRedirectUrl } from "@/lib/redirect-url";
-import { addAuditLog, readStore, writeStore } from "@/lib/store";
+import { addAuditLog, readStore, writeStore } from "../../../../../tests/store";
 
 export const runtime = "nodejs";
 
@@ -150,6 +150,20 @@ export async function GET(request: Request) {
     if (!accessToken) throw new Error("Provider did not return an access token.");
 
     const profile = await fetchProviderProfile(oauthState.platform, accessToken);
+    if (oauthState.platform === "Facebook") {
+      account.providerUserId = profile.id;
+      account.accountName = profile.name;
+      account.pageSelectionRequired = true;
+      account.accessTokenEncrypted = encryptOAuthTokens({ accessToken });
+      account.tokenExpiresAt = asSeconds(tokenData.expires_in)
+        ? new Date(Date.now() + asSeconds(tokenData.expires_in)! * 1000).toISOString()
+        : undefined;
+      const scopeValue = asString(tokenData.scope) || asString(tokenData.scopes);
+      account.grantedScopes = scopeValue ? scopeValue.split(/[\s,]+/).filter(Boolean) : undefined;
+      writeStore(store);
+      return NextResponse.redirect(getAppRedirectUrl("/integrations/facebook-pages", request.url));
+    }
+
     account.connected = true;
     account.providerUserId = profile.id;
     account.accountName = profile.name;

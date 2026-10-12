@@ -1,6 +1,6 @@
 import { requireAdmin } from "@/lib/access";
 import { approveAccessRequestAction, rejectAccessRequestAction } from "@/app/actions";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../../tests/store";
 
 export default async function AdminRequestsPage() {
   await requireAdmin();
@@ -18,30 +18,30 @@ export default async function AdminRequestsPage() {
         </nav>
       </aside>
       <section className="content-panel">
-        <h1>Access requests</h1>
+        <h1>Subscription requests</h1>
         <ul className="list-block">
           {store.accessRequests.length === 0 ? (
-            <li className="empty-state">No pending access requests.</li>
+            <li className="empty-state">No subscription requests yet.</li>
           ) : (
             store.accessRequests.map((entry) => (
               <li key={entry.id} className="request-item">
                 <div className="request-meta">
                   <strong>{entry.name}</strong>
-                  <span>@{entry.username}</span>
                   <span>{entry.email}</span>
-                  <span>{entry.inviteCodeVerified ? "Access code verified" : "Legacy request"}</span>
+                  {entry.whatsappNumber && <span>WhatsApp: {entry.whatsappNumber}</span>}
+                  <span>{entry.subscriptionPlan ? `Plan: ${entry.subscriptionPlan}` : "Legacy access request"}</span>
                   <span>{entry.status}</span>
                 </div>
-                <div className="request-actions">
+                {entry.status === "PENDING" && <div className="request-actions">
                   <form action={approveAccessRequestAction}>
                     <input type="hidden" name="requestId" value={entry.id} />
-                    <button type="submit" className="primary-btn">Approve</button>
+                    <button type="submit" className="primary-btn">Mark reviewed</button>
                   </form>
                   <form action={rejectAccessRequestAction}>
                     <input type="hidden" name="requestId" value={entry.id} />
                     <button type="submit" className="secondary-btn">Reject</button>
                   </form>
-                </div>
+                </div>}
               </li>
             ))
           )}

@@ -1,7 +1,7 @@
 import { requireCustomer } from "@/lib/access";
 import CustomerNav from "@/app/components/CustomerNav";
 import { groupMetricRecords, latestMetricSnapshots, sumMetricRecords } from "@/lib/analytics";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../tests/store";
 
 function parseDateStart(value?: string) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;

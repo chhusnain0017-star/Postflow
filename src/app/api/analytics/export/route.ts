@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCustomer } from "@/lib/access";
 import { groupMetricRecords, latestMetricSnapshots } from "@/lib/analytics";
-import { readStore } from "@/lib/store";
+import { readStore } from "../../../../../tests/store";
 
 function csvCell(value: string | number) {
   let text = String(value);

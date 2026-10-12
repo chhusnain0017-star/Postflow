@@ -6,7 +6,7 @@ import { createSessionToken, decryptOAuthTokens, decryptProviderCredentials, enc
 import { getAppRedirectUrl } from "../src/lib/redirect-url.ts";
 import { localDateTimeToUtc } from "../src/lib/time-zone.ts";
 import { groupMetricRecords, latestMetricSnapshots, sumMetricRecords } from "../src/lib/analytics.ts";
-import { addOneYear } from "../src/lib/billing.ts";
+import { addOneYear, addTrialPeriod } from "../src/lib/billing.ts";
 import { createAuthorizationUrl, getOAuthAppCredentials } from "../src/lib/oauth.ts";
 
 test("customer can access their own post and not another workspace post", () => {
@@ -167,6 +167,12 @@ test("account expiry is the next calendar anniversary, not a fixed 365-day durat
   assert.equal(addOneYear("2024-02-29T00:00:00.000Z").toISOString(), "2025-03-01T00:00:00.000Z");
 });
 
+test("free trial expiry is exactly seven elapsed days after sign-in", () => {
+  const startedAt = "2026-10-13T03:27:00.000Z";
+  assert.equal(addTrialPeriod(startedAt).toISOString(), "2026-10-20T03:27:00.000Z");
+  assert.throws(() => addTrialPeriod("invalid-date"), /Trial start date is invalid/);
+});
+
 test("OAuth tokens are encrypted and provider authorization parameters are platform-specific", () => {
   const previousKey = process.env.ENCRYPTION_KEY;
   process.env.ENCRYPTION_KEY = "a-test-encryption-key-with-more-than-32-characters";
@@ -185,7 +191,10 @@ test("OAuth tokens are encrypted and provider authorization parameters are platf
   const tiktokUrl = createAuthorizationUrl("TikTok", "tt-client", "https://postflow.example/callback", "state");
   assert.match(tiktokUrl.searchParams.get("scope") ?? "", /user\.info\.basic,video\.publish/);
   const facebookUrl = createAuthorizationUrl("Facebook", "fb-client", "https://postflow.example/callback", "state");
-  assert.equal(facebookUrl.searchParams.get("scope"), "public_profile");
+  assert.equal(
+    facebookUrl.searchParams.get("scope"),
+    "public_profile,pages_show_list,pages_read_engagement,pages_manage_posts,pages_manage_engagement",
+  );
 });
 
 test("Meta OAuth app credentials are shared by Facebook and Instagram and require both values", () => {
