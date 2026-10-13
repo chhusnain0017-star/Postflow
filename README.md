@@ -20,11 +20,26 @@ The public account-deletion request page is [https://postflow.taskflow.monster/d
 
 ## Provider setup and account terms
 
-Set `APP_URL=https://postflow.taskflow.monster` in Railway. Register this exact redirect URI with each standard OAuth provider:
+Set `APP_URL=https://postflow.taskflow.monster` in Railway. Use the public homepage `https://postflow.taskflow.monster` as the TikTok app's Website URL; it is a public product page, not the sign-in screen. The Privacy Policy and Terms of Service are linked from the homepage and are available without signing in:
+
+```text
+https://postflow.taskflow.monster/privacy
+https://postflow.taskflow.monster/terms
+```
+
+For Google sign-in, open the Google Cloud Console OAuth 2.0 Web client that matches `GOOGLE_CLIENT_ID` and register this exact Authorized redirect URI:
+
+```text
+https://postflow.taskflow.monster/api/auth/google/callback
+```
+
+The same Google client also needs this Authorized redirect URI for YouTube account connections:
 
 ```text
 https://postflow.taskflow.monster/api/integrations/callback
 ```
+
+The redirect URI must match exactly, including `https`, hostname, and path. A Google `Error 400: redirect_uri_mismatch` means the URI sent by the app is missing from that OAuth client or does not match; verify Railway's `APP_URL` is exactly `https://postflow.taskflow.monster` and save the Google client changes.
 
 Configure each provider app once in Railway using the server-side environment variables below. Customers then click the provider's Connect button and authorize their own account; they must never enter the developer app's Client ID or Secret. Keep all secrets private and set `ENCRYPTION_KEY` to a stable value.
 
